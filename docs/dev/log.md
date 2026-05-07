@@ -56,3 +56,48 @@ Added development guidelines based on mistakes encountered:
 
 - 19 tests, all passing, no warnings
 - Modules: `file`, `config`, CLI routing
+
+## 2026-05-07: Steps 2–3 — `glc init` + `glc auth`
+
+### `glc init`
+
+- Module: `src/gleeam_code/init.gleam`
+- Checks `gleam.toml` exists, creates `solutions/` and `.glc.toml`
+- Idempotent: skips existing files/dirs without error, never overwrites `.glc.toml`
+
+### Architecture conventions
+
+- Command function signature: `pub fn run(base_dir, print) -> Result(Nil, String)`
+- `print` callback separates IO from logic (enables testing, future `--quiet`/`--json`)
+- Global `-C <dir>` option parsed before command routing via `parse_global`
+
+### `glc auth`
+
+- Module: `src/gleeam_code/auth.gleam`
+- Extended signature: `run(_base_dir, print, read_line)` — `read_line` callback
+  enables testing without stdin
+- Two y/N guards before saving:
+  1. If `LEETCODE_SESSION` env var exists → warn that file takes priority, confirm
+  2. If `~/.gleeam/session` already exists → confirm overwrite
+- FFI: `src/gleeam_code_io_ffi.erl` wraps `io:get_line/1` (returns `{ok, Data} | {error, nil}`)
+
+### Authentication priority change
+
+- **Before**: env var > file
+- **After**: file > env var
+- **Rationale**: `glc auth` is an explicit tool-specific choice. Env var may be
+  set for other LeetCode CLI tools (potentially different accounts). File represents
+  user's intentional gleeam_code configuration.
+
+### Design decisions
+
+- `read_line` as callback rather than hardcoded FFI: matches the `print` callback
+  pattern for IO separation. Test FFI (`gleeam_code_auth_test_ffi.erl`) provides
+  a sequential reader using message passing for multi-prompt test flows.
+- y/N guards prevent accidental overwrites and inform users about priority behavior.
+
+### Final state
+
+- 34 tests, all passing, no warnings
+- New modules: `init`, `auth`
+- New FFI: `gleeam_code_io_ffi.erl` (stdin), `gleeam_code_auth_test_ffi.erl` (test helper)

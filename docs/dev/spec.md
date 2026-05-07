@@ -6,11 +6,11 @@
 
 - [x] Project foundation (dependencies, gleam.toml)
 - [x] File I/O module (`file.gleam` + `gleeam_code_file_ffi.erl`)
-- [x] Config module (`config.gleam` — session read/write, env var fallback)
+- [x] Config module (`config.gleam` — session read/write, file > env var priority)
 - [x] CLI entry point (argv + route, testable)
 - [x] `glc init` — create `solutions/`, `.glc.toml`, check `gleam.toml`
 - [x] Global `-C <dir>` option + `parse_global` + Architecture conventions
-- [ ] `glc auth` — prompt and save session cookie
+- [x] `glc auth` — prompt and save session cookie (with y/N guards)
 - [ ] `glc fetch` — LeetCode GraphQL client, stub/test/problem generation
 - [ ] `glc test` — run `gleam test` for a specific problem
 - [ ] `glc submit` — Erlang conversion + LeetCode submit + result display
@@ -69,7 +69,15 @@ solutions_dir = "solutions"
 
 ### `glc auth`
 
-Prompt the user to paste their `LEETCODE_SESSION` cookie and save it to `~/.gleeam/config.toml`.
+Prompt the user to paste their `LEETCODE_SESSION` cookie and save it to `~/.gleeam/session`.
+
+- If `LEETCODE_SESSION` env var is already set:
+  - Warn that the session file takes higher priority
+  - Prompt `Save a separate session anyway? [y/N]` → N aborts
+- If `~/.gleeam/session` already exists:
+  - Prompt `Overwrite? [y/N]` → N aborts
+- Prompt to paste cookie → trim → save to `~/.gleeam/session`
+- Empty input → error, session not saved
 
 ### `glc fetch <slug-or-number>`
 
@@ -99,14 +107,12 @@ Build Gleam source, convert to Erlang, and submit to LeetCode.
 ## Authentication
 
 Priority order:
-1. Environment variable `LEETCODE_SESSION`
-2. Config file `~/.gleeam/config.toml`
+1. Session file `~/.gleeam/session` (plain text, cookie value only)
+2. Environment variable `LEETCODE_SESSION` (fallback)
 
-Config file format:
-```toml
-[auth]
-leetcode_session = "<cookie value>"
-```
+The session file takes priority because `glc auth` represents an explicit,
+tool-specific choice by the user. The env var serves as a fallback for users
+who already have it set for other LeetCode CLI tools.
 
 ## LeetCode API
 
@@ -303,8 +309,13 @@ The `directory` value is passed as `base_dir` to each command's `run()`.
 
 ### Step 3: `glc auth`
 
-- Prompt user to paste `LEETCODE_SESSION` cookie via stdin
-- Save to `~/.gleeam/session`
+- Module: `src/gleeam_code/auth.gleam`
+- Signature: `pub fn run(_base_dir: String, print: fn(String) -> Nil, read_line: fn(String) -> Result(String, Nil)) -> Result(Nil, String)`
+- `read_line` callback: production uses Erlang FFI (`io:get_line/1`), tests pass mock functions
+- Guards: env var existence check (y/N), session file existence check (y/N)
+- Save to `~/.gleeam/session` via `config.save_session`
+- FFI: `src/gleeam_code_io_ffi.erl` — wraps `io:get_line/1`
+- Tests: `test/gleeam_code/auth_test.gleam` — uses sequential reader FFI for multi-prompt flows
 
 ### Step 4: `glc fetch`
 

@@ -10,12 +10,21 @@ const config_dir = ".gleeam"
 const session_filename = "session"
 
 /// Resolve the LeetCode session cookie.
-/// Priority: env var LEETCODE_SESSION > ~/.gleeam/session file.
+/// Priority: session file (~/.gleeam/session) > env var LEETCODE_SESSION.
 pub fn get_session() -> Result(String, String) {
-  case envoy.get("LEETCODE_SESSION") {
-    Ok(value) if value != "" -> Ok(value)
-    _ -> read_session_file()
+  case read_session_file() {
+    Ok(value) -> Ok(value)
+    Error(_) ->
+      case envoy.get("LEETCODE_SESSION") {
+        Ok(value) if value != "" -> Ok(value)
+        _ -> Error("No session found. Set LEETCODE_SESSION env var or run: glc auth")
+      }
   }
+}
+
+pub fn session_file_exists() -> Bool {
+  let path = config_path() <> "/" <> session_filename
+  file.exists(path)
 }
 
 /// Save session cookie to ~/.gleeam/session.
@@ -42,8 +51,7 @@ fn read_session_file() -> Result(String, String) {
         _ -> Ok(trimmed)
       }
     }
-    Error(_) ->
-      Error("No session found. Set LEETCODE_SESSION env var or run: glc auth")
+    Error(_) -> Error("No session file found")
   }
 }
 

@@ -1,5 +1,6 @@
 import argv
 import gleam/io
+import gleeam_code/auth
 import gleeam_code/init
 
 pub type GlobalOpts {
@@ -41,7 +42,11 @@ pub fn main() -> Nil {
         Ok(_) -> Nil
         Error(msg) -> io.println("Error: " <> msg)
       }
-    Ok(Auth) -> io.println("TODO: glc auth")
+    Ok(Auth) ->
+      case auth.run(opts.directory, io.println, auth.stdin_read_line) {
+        Ok(_) -> Nil
+        Error(msg) -> io.println("Error: " <> msg)
+      }
     Ok(Fetch(target)) -> io.println("TODO: glc fetch " <> target)
     Ok(Test(target)) -> io.println("TODO: glc test " <> target)
     Ok(Submit(target)) -> io.println("TODO: glc submit " <> target)

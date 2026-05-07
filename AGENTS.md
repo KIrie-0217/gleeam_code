@@ -65,6 +65,14 @@ Gleam source is compiled via `gleam build --target erlang`, then the generated
 For each module: write implementation → write tests → pass tests → move on.
 Do not create multiple modules before testing any of them.
 
+After completing a feature or module:
+1. Update `docs/dev/spec.md` — mark the item as done in the status checklist,
+   update command/step details to reflect the actual implementation.
+2. Update `docs/dev/log.md` — add an entry describing what was built, design
+   decisions made, and any issues encountered. Include rationale for non-obvious
+   choices so future readers understand the "why".
+3. Commit the changes.
+
 ### Erlang FFI
 
 When writing `@external` bindings to Erlang functions:
