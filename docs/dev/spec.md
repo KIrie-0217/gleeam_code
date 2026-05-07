@@ -8,7 +8,8 @@
 - [x] File I/O module (`file.gleam` + `gleeam_code_file_ffi.erl`)
 - [x] Config module (`config.gleam` — session read/write, env var fallback)
 - [x] CLI entry point (argv + route, testable)
-- [ ] `glc init` — create `solutions/`, `.glc.toml`, check `gleam.toml`
+- [x] `glc init` — create `solutions/`, `.glc.toml`, check `gleam.toml`
+- [x] Global `-C <dir>` option + `parse_global` + Architecture conventions
 - [ ] `glc auth` — prompt and save session cookie
 - [ ] `glc fetch` — LeetCode GraphQL client, stub/test/problem generation
 - [ ] `glc test` — run `gleam test` for a specific problem
