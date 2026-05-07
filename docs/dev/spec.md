@@ -55,7 +55,8 @@ gleam run -m gleescript          # produces ./glc escript
 Initialize the current directory for glc use. Requires an existing Gleam project (`gleam.toml`).
 
 - Checks `base_dir/gleam.toml` exists → Error if not found
-- Creates `base_dir/solutions/` directory (skip if exists, idempotent)
+- Creates `base_dir/src/solutions/` directory (skip if exists, idempotent)
+- Creates `base_dir/test/solutions/` directory (skip if exists, idempotent)
 - Creates `base_dir/.glc.toml` (skip if exists, never overwrite)
 - Each step notifies via `print` on creation or skip
 - Error message: `"gleam.toml not found. Run 'gleam new <project>' first."`
@@ -84,10 +85,22 @@ Prompt the user to paste their `LEETCODE_SESSION` cookie and save it to `~/.glee
 Fetch a problem from LeetCode and generate solution files.
 
 - Accepts either a problem slug (`two-sum`) or number (`1`)
-- Creates `solutions/<0001>-<slug>/` directory with:
-  - `solution.gleam` — function stub
-  - `solution_test.gleam` — sample test cases
-  - `problem.md` — problem description
+- Authentication is optional for free problems; required for Premium
+- Creates files in Gleam project structure:
+  - `src/solutions/p0001_two_sum/solution.gleam` — module comment (URL, difficulty) + function stub
+  - `test/solutions/p0001_two_sum/solution_test.gleam` — sample test cases with expected outputs
+- Module naming: `p` prefix + zero-padded number + snake_case slug (Gleam requires lowercase letter start)
+- Expected outputs extracted from HTML content via regex (`<strong>Output:</strong>`)
+  - Fallback to `todo` if extraction fails
+
+#### Premium problem handling
+
+| Condition | Behavior |
+|---|---|
+| `content` present | Normal processing |
+| `content: null` + `isPaidOnly: true` + no auth | Error: `"Premium problem. Run 'glc auth' to authenticate."` |
+| `content: null` + `isPaidOnly: true` + auth present | Error: `"Premium problem. Your account may not have Premium access."` |
+| `content: null` + other | Error: `"Failed to fetch problem content."` |
 
 ### `glc test <slug-or-number>`
 
@@ -140,17 +153,26 @@ Mutation `interpretSolution` for remote test execution (future consideration).
 
 ## Directory Structure
 
+Solution files live inside Gleam's standard `src/` and `test/` directories
+so that `gleam build` and `gleam test` work without extra tooling.
+
 ```
-solutions/
-├── 0001-two-sum/
-│   ├── solution.gleam
-│   ├── solution_test.gleam
-│   └── problem.md
-├── 0002-add-two-numbers/
-│   ├── solution.gleam
-│   ├── solution_test.gleam
-│   └── problem.md
+src/solutions/
+├── p0001_two_sum/
+│   └── solution.gleam
+├── p0002_add_two_numbers/
+│   └── solution.gleam
+
+test/solutions/
+├── p0001_two_sum/
+│   └── solution_test.gleam
+├── p0002_add_two_numbers/
+│   └── solution_test.gleam
 ```
+
+Module naming convention: `p` + zero-padded number (4 digits) + `_` + snake_case slug.
+Gleam module names must start with a lowercase letter and contain only
+lowercase alphanumeric characters or underscores.
 
 ## Erlang Conversion
 
@@ -319,11 +341,26 @@ The `directory` value is passed as `base_dir` to each command's `run()`.
 
 ### Step 4: `glc fetch`
 
-- LeetCode GraphQL client: query `questionContent` by slug or number
-- Parse response: extract Erlang code snippet, example test cases, problem HTML
-- Generate `solutions/<0001>-<slug>/solution.gleam` (Gleam stub from Erlang spec)
-- Generate `solutions/<0001>-<slug>/solution_test.gleam` (sample test cases)
-- Generate `solutions/<0001>-<slug>/problem.md` (HTML → plain text conversion)
+Modules:
+- `src/gleeam_code/fetch.gleam` — command entry point (`run`)
+- `src/gleeam_code/leetcode.gleam` — GraphQL client (HTTP request + JSON parse)
+- `src/gleeam_code/codegen.gleam` — Erlang spec → Gleam stub/test generation
+
+Flow:
+1. Resolve input (slug or number) → `titleSlug`
+2. Get session (optional — proceed without for free problems)
+3. GraphQL query `questionContent` → parse JSON response
+4. Extract Erlang code snippet from `codeSnippets` (lang: `"erlang"`)
+5. Parse `-spec` line: function name, arg names+types, return type
+6. Convert Erlang types → Gleam types (Phase 1: integer, float, boolean, string, lists)
+7. Extract expected outputs from HTML via regex (`<strong>Output:</strong>`)
+8. Generate `src/solutions/p<NNNN>_<slug>/solution.gleam` (module comment + stub)
+9. Generate `test/solutions/p<NNNN>_<slug>/solution_test.gleam` (example tests)
+
+Testing strategy:
+- Unit tests for JSON parsing (hardcoded response fixtures)
+- Unit tests for codegen (Erlang spec → Gleam code)
+- Integration test: manual (actual API call)
 
 ### Step 5: `glc test`
 
@@ -347,7 +384,7 @@ Target: array, string, and numeric problems (no TreeNode/ListNode).
 
 - `glc init` — initialize project (create `solutions/`, `.glc.toml`)
 - `glc auth` — save cookie
-- `glc fetch` — fetch problem, generate Gleam stub + tests + problem.md
+- `glc fetch` — fetch problem, generate Gleam stub + tests (auth optional for free problems)
 - `glc test` — run local tests
 - `glc submit` — Erlang conversion (strip module/export only) + submit
 - Gleam stdlib usage: not supported. Users write pure Gleam or use `@external` for Erlang stdlib calls.
