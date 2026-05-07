@@ -3,6 +3,7 @@ import gleam/io
 import gleeam_code/auth
 import gleeam_code/fetch
 import gleeam_code/init
+import gleeam_code/test_cmd
 
 pub type GlobalOpts {
   GlobalOpts(directory: String)
@@ -53,7 +54,11 @@ pub fn main() -> Nil {
         Ok(_) -> Nil
         Error(msg) -> io.println("Error: " <> msg)
       }
-    Ok(Test(target)) -> io.println("TODO: glc test " <> target)
+    Ok(Test(target)) ->
+      case test_cmd.run(opts.directory, target, io.println) {
+        Ok(_) -> Nil
+        Error(msg) -> io.println("Error: " <> msg)
+      }
     Ok(Submit(target)) -> io.println("TODO: glc submit " <> target)
     Error(msg) -> io.println(msg)
   }

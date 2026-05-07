@@ -163,3 +163,34 @@ Parses `-spec` line from LeetCode's Erlang snippet:
 - 42 tests, all passing
 - New modules: `leetcode`, `codegen`, `fetch`
 - Verified with: `glc fetch two-sum`, `glc fetch 14` (number → slug resolution)
+
+## 2026-05-08: Step 5 — `glc test`
+
+### Overview
+
+Implemented selective test execution using EUnit directly, bypassing
+`gleam test` (which has no module filter support).
+
+### Key decisions
+
+- **EUnit direct invocation**: `gleam test` and `gleeunit` run all tests with
+  no filtering capability. `startest` package supports filtering but adds a
+  dependency. EUnit can run a single module via `eunit:test(Module, Options)` —
+  one FFI function suffices.
+- **Module resolution by directory scan**: scans `test/solutions/` for entries
+  matching the slug or number. No API call needed — works offline.
+- **Same BEAM instance**: EUnit runs in-process, no subprocess spawning. Output
+  goes directly to stdout.
+
+### Implementation
+
+- `src/gleeam_code/test_cmd.gleam` — command entry point, module resolution
+- `src/gleeam_code_test_runner_ffi.erl` — wraps `eunit:test/2`, returns `{ok, nil} | {error, nil}`
+- `src/gleeam_code_test_cmd_ffi.erl` — wraps `file:list_dir/1`, converts charlists to binaries
+
+### Final state
+
+- 42 tests, all passing
+- New modules: `test_cmd`
+- New FFI: `gleeam_code_test_runner_ffi.erl`, `gleeam_code_test_cmd_ffi.erl`
+- Verified with: `glc test two-sum`, `glc test 1`, error case for missing problem

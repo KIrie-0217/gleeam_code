@@ -12,7 +12,7 @@
 - [x] Global `-C <dir>` option + `parse_global` + Architecture conventions
 - [x] `glc auth` — prompt and save session cookie (with y/N guards)
 - [x] `glc fetch` — LeetCode GraphQL client, Gleam stub + test generation
-- [ ] `glc test` — run `gleam test` for a specific problem
+- [x] `glc test` — run EUnit for a specific problem's test module
 - [ ] `glc submit` — Erlang conversion + LeetCode submit + result display
 
 ### Phase 2
@@ -104,9 +104,12 @@ Fetch a problem from LeetCode and generate solution files.
 
 ### `glc test <slug-or-number>`
 
-Build and run tests for a specific problem.
+Run tests for a specific problem using EUnit directly.
 
-- Wraps `gleam test` targeting the specific problem's test file
+- Resolves slug or number to module name by scanning `test/solutions/`
+- Executes EUnit on the specific test module (not all tests)
+- Accepts slug (`two-sum`) or number (`1`)
+- Error if problem not fetched yet: `"Problem not found: <target>. Run 'glc fetch <target>' first."`
 
 ### `glc submit <slug-or-number>`
 
@@ -364,8 +367,12 @@ Testing strategy:
 
 ### Step 5: `glc test`
 
-- Locate test file for the given problem
-- Run `gleam test` as subprocess
+- Module: `src/gleeam_code/test_cmd.gleam`
+- Signature: `pub fn run(base_dir: String, target: String, print: fn(String) -> Nil) -> Result(Nil, String)`
+- Resolves slug/number → module name by scanning `test/solutions/` directory
+- Runs EUnit directly on the target module via FFI (`eunit:test/2`)
+- FFI: `src/gleeam_code_test_runner_ffi.erl` (EUnit), `src/gleeam_code_test_cmd_ffi.erl` (directory listing)
+- No subprocess needed — EUnit runs in the same BEAM instance
 
 ### Step 6: `glc submit`
 
