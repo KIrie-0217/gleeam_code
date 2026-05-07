@@ -65,6 +65,9 @@ Gleam source is compiled via `gleam build --target erlang`, then the generated
 For each module: write implementation → write tests → pass tests → move on.
 Do not create multiple modules before testing any of them.
 
+Always run `gleam format src test` before committing. CI enforces
+`gleam format --check`.
+
 After completing a feature or module:
 1. Update `docs/dev/spec.md` — mark the item as done in the status checklist,
    update command/step details to reflect the actual implementation.

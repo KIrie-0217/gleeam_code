@@ -34,7 +34,8 @@ pub fn route(args: List(String)) -> Result(Command, String) {
     ["fetch", target] -> Ok(Fetch(target))
     ["test", target] -> Ok(Test(target))
     ["submit", target] -> Ok(Submit(target))
-    ["fetch"] | ["test"] | ["submit"] -> Error("Missing argument: <slug-or-number>")
+    ["fetch"] | ["test"] | ["submit"] ->
+      Error("Missing argument: <slug-or-number>")
     _ -> Error(usage())
   }
 }

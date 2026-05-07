@@ -305,3 +305,9 @@ Evaluated options for `--version`:
 - New files: `flake.nix`, `flake.lock`
 - New dependency: `gleescript` (dev only)
 - Verified on: `gleam run`, gleescript escript, Nix build
+
+## 2026-05-08: CI fix — `gleam format`
+
+- GitHub Actions CI failed on `gleam format --check src test`
+- Applied `gleam format` to all source and test files
+- AGENTS.md should include: run `gleam format` before committing

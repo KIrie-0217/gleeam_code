@@ -1,5 +1,5 @@
-import gleeam_code/internal/file
 import gleeam_code/init
+import gleeam_code/internal/file
 
 const test_dir = "test/tmp_init_test"
 

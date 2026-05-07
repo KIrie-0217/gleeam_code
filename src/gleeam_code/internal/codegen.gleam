@@ -3,11 +3,7 @@ import gleam/list
 import gleam/string
 
 pub type FunctionSpec {
-  FunctionSpec(
-    name: String,
-    params: List(Param),
-    return_type: String,
-  )
+  FunctionSpec(name: String, params: List(Param), return_type: String)
 }
 
 pub type Param {
@@ -85,8 +81,7 @@ fn pad_outputs(outputs: List(String), target_len: Int) -> List(String) {
   let current_len = list.length(outputs)
   case current_len >= target_len {
     True -> outputs
-    False ->
-      list.append(outputs, list.repeat("todo", target_len - current_len))
+    False -> list.append(outputs, list.repeat("todo", target_len - current_len))
   }
 }
 
@@ -126,11 +121,7 @@ fn parse_spec_line(line: String) -> Result(FunctionSpec, String) {
             |> string.trim
             |> string.drop_end(1)
             |> erlang_type_to_gleam
-          Ok(FunctionSpec(
-            name: name,
-            params: params,
-            return_type: return_type,
-          ))
+          Ok(FunctionSpec(name: name, params: params, return_type: return_type))
         }
       }
     }
@@ -186,10 +177,7 @@ fn parse_single_param(param_str: String) -> Param {
         type_str: erlang_type_to_gleam(string.trim(type_str)),
       )
     Error(_) ->
-      Param(
-        name: "arg",
-        type_str: erlang_type_to_gleam(string.trim(param_str)),
-      )
+      Param(name: "arg", type_str: erlang_type_to_gleam(string.trim(param_str)))
   }
 }
 

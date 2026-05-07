@@ -1,8 +1,8 @@
+import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request
 import gleam/httpc
 import gleam/json
-import gleam/dynamic/decode
 import gleam/result
 import gleam/string
 import gleeam_code/internal/config
@@ -87,17 +87,15 @@ fn find_matching_entry(
   }
 }
 
-fn find_by_number(
-  entries: List(String),
-  number: String,
-) -> Result(String, Nil) {
+fn find_by_number(entries: List(String), number: String) -> Result(String, Nil) {
   let padded = string.pad_start(number, 4, "0")
-  do_find(entries, fn(entry) {
-    string.starts_with(entry, "p" <> padded <> "_")
-  })
+  do_find(entries, fn(entry) { string.starts_with(entry, "p" <> padded <> "_") })
 }
 
-fn find_by_slug(entries: List(String), snake_slug: String) -> Result(String, Nil) {
+fn find_by_slug(
+  entries: List(String),
+  snake_slug: String,
+) -> Result(String, Nil) {
   do_find(entries, fn(entry) {
     case string.split_once(entry, "_") {
       Ok(#(_, slug_part)) -> slug_part == snake_slug
@@ -170,7 +168,8 @@ fn extract_csrf_from_headers(
   case headers {
     [] -> Error("CSRF token not found in response")
     [#(name, value), ..rest] ->
-      case string.lowercase(name) == "set-cookie"
+      case
+        string.lowercase(name) == "set-cookie"
         && string.contains(value, "csrftoken=")
       {
         True -> {
@@ -217,11 +216,7 @@ fn read_erl_file(path: String) -> Result(String, String) {
 }
 
 pub type SubmitResult {
-  SubmitResult(
-    status: String,
-    runtime: String,
-    memory: String,
-  )
+  SubmitResult(status: String, runtime: String, memory: String)
 }
 
 fn submit_to_leetcode(
@@ -355,7 +350,11 @@ fn parse_final_result(body: String) -> Result(SubmitResult, String) {
     use status <- decode.field("status_msg", decode.string)
     use runtime <- decode.field("status_runtime", decode.string)
     use memory <- decode.field("status_memory", decode.string)
-    decode.success(SubmitResult(status: status, runtime: runtime, memory: memory))
+    decode.success(SubmitResult(
+      status: status,
+      runtime: runtime,
+      memory: memory,
+    ))
   }
 
   case json.parse(body, decoder) {
@@ -367,10 +366,7 @@ fn parse_final_result(body: String) -> Result(SubmitResult, String) {
 fn format_result(result: SubmitResult) -> String {
   case result.status {
     "Accepted" ->
-      "✓ Accepted! Runtime: "
-      <> result.runtime
-      <> ", Memory: "
-      <> result.memory
+      "✓ Accepted! Runtime: " <> result.runtime <> ", Memory: " <> result.memory
     _ ->
       "✗ "
       <> result.status
@@ -384,8 +380,7 @@ fn format_result(result: SubmitResult) -> String {
 fn is_numeric(s: String) -> Bool {
   case string.to_graphemes(s) {
     [] -> False
-    chars ->
-      do_all_digits(chars)
+    chars -> do_all_digits(chars)
   }
 }
 

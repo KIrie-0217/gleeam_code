@@ -1,6 +1,5 @@
 /// File I/O operations.
 /// Thin wrappers over Erlang file/filelib via FFI.
-
 import gleam/erlang/atom.{type Atom}
 
 pub type FileError =

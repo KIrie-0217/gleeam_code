@@ -12,8 +12,7 @@ pub fn run(base_dir: String, print: fn(String) -> Nil) -> Result(Nil, String) {
   let glc_toml = base_dir <> "/.glc.toml"
 
   case file.exists(gleam_toml) {
-    False ->
-      Error("gleam.toml not found. Run 'gleam new <project>' first.")
+    False -> Error("gleam.toml not found. Run 'gleam new <project>' first.")
     True -> {
       case create_solutions_dir(src_solutions, "src/solutions/", print) {
         Ok(_) ->
@@ -44,7 +43,9 @@ fn create_solutions_dir(
           Ok(Nil)
         }
         Error(err) ->
-          Error("Failed to create " <> label <> ": " <> file.describe_error(err))
+          Error(
+            "Failed to create " <> label <> ": " <> file.describe_error(err),
+          )
       }
   }
 }

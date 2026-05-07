@@ -1,8 +1,8 @@
+import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request
 import gleam/httpc
 import gleam/json
-import gleam/dynamic/decode
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
@@ -104,10 +104,7 @@ fn send_graphql(
     Ok(resp) ->
       case resp.status {
         200 -> Ok(resp.body)
-        status ->
-          Error(HttpError(
-            "status " <> string.inspect(status),
-          ))
+        status -> Error(HttpError("status " <> string.inspect(status)))
       }
     Error(_) -> Error(HttpError("failed to connect"))
   }
@@ -135,15 +132,9 @@ fn parse_question_fields(
   session: Result(String, String),
 ) -> Result(Problem, FetchError) {
   let content_decoder =
-    decode.at(
-      ["data", "question", "content"],
-      decode.optional(decode.string),
-    )
+    decode.at(["data", "question", "content"], decode.optional(decode.string))
   let is_paid_decoder =
-    decode.at(
-      ["data", "question", "isPaidOnly"],
-      decode.bool,
-    )
+    decode.at(["data", "question", "isPaidOnly"], decode.bool)
 
   let content_result = json.parse(body, content_decoder)
   let is_paid_result = json.parse(body, is_paid_decoder)
@@ -178,7 +169,14 @@ fn parse_full_problem(
         "exampleTestcaseList",
         decode.list(decode.string),
       )
-      decode.success(#(frontend_id, title_slug, title, difficulty, snippets, testcases))
+      decode.success(#(
+        frontend_id,
+        title_slug,
+        title,
+        difficulty,
+        snippets,
+        testcases,
+      ))
     })
 
   case json.parse(body, decoder) {

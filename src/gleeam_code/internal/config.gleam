@@ -1,6 +1,5 @@
 /// Configuration and credential management.
 /// Reads LEETCODE_SESSION from env var or ~/.gleeam/session file.
-
 import envoy
 import gleam/string
 import gleeam_code/internal/file
@@ -17,7 +16,10 @@ pub fn get_session() -> Result(String, String) {
     Error(_) ->
       case envoy.get("LEETCODE_SESSION") {
         Ok(value) if value != "" -> Ok(value)
-        _ -> Error("No session found. Set LEETCODE_SESSION env var or run: glc auth")
+        _ ->
+          Error(
+            "No session found. Set LEETCODE_SESSION env var or run: glc auth",
+          )
       }
   }
 }
@@ -35,9 +37,11 @@ pub fn save_session(cookie: String) -> Result(Nil, String) {
     Ok(_) ->
       case file.write(path, string.trim(cookie)) {
         Ok(_) -> Ok(Nil)
-        Error(err) -> Error("Failed to write session: " <> file.describe_error(err))
+        Error(err) ->
+          Error("Failed to write session: " <> file.describe_error(err))
       }
-    Error(err) -> Error("Failed to create config dir: " <> file.describe_error(err))
+    Error(err) ->
+      Error("Failed to create config dir: " <> file.describe_error(err))
   }
 }
 

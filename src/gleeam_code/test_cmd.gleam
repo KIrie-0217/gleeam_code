@@ -11,8 +11,7 @@ pub fn run(
 ) -> Result(Nil, String) {
   use module_name <- result.try(resolve_module(base_dir, target))
 
-  let test_module_str =
-    "solutions@" <> module_name <> "@solution_test"
+  let test_module_str = "solutions@" <> module_name <> "@solution_test"
 
   print("Running tests for: " <> target)
 
@@ -26,8 +25,7 @@ pub fn run(
 fn resolve_module(base_dir: String, target: String) -> Result(String, String) {
   let test_solutions_dir = base_dir <> "/test/solutions"
   case list_directory(test_solutions_dir) {
-    Error(_) ->
-      Error("No solutions found. Run 'glc fetch' first.")
+    Error(_) -> Error("No solutions found. Run 'glc fetch' first.")
     Ok(entries) ->
       case find_matching_entry(entries, target) {
         Ok(name) -> Ok(name)
