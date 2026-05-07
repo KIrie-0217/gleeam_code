@@ -194,3 +194,45 @@ Implemented selective test execution using EUnit directly, bypassing
 - New modules: `test_cmd`
 - New FFI: `gleeam_code_test_runner_ffi.erl`, `gleeam_code_test_cmd_ffi.erl`
 - Verified with: `glc test two-sum`, `glc test 1`, error case for missing problem
+
+## 2026-05-08: Step 6 — `glc submit`
+
+### Overview
+
+Implemented the full submission pipeline: build → convert → submit → poll → display.
+Submit API integration requires session key for live testing (deferred).
+
+### Erlang conversion (`erlang_convert.gleam`)
+
+Strips all Gleam-generated directives from `.erl` output:
+- `-module`, `-compile`, `-define`, `-export`, `-file`
+- `-if`/`-else`/`-endif` (OTP version guards)
+- `?MODULEDOC(...)` / `?DOC(...)` macro invocations and their string contents
+
+Preserves all `-spec` lines and function bodies (including private helper
+functions). LeetCode's judge adds `-module(solution)` and `-export` itself.
+
+### Submit API
+
+- Uses REST endpoint (`/problems/<slug>/submit/`) not GraphQL
+- Polls `/submissions/detail/<id>/check/` with 1s interval until state is SUCCESS
+- Parses `status_msg`, `status_runtime`, `status_memory` from final response
+
+### Design decisions
+
+- **`os:cmd` for `gleam build`**: subprocess approach is simpler than trying
+  to invoke the Gleam compiler from within the BEAM. FFI wrapper converts
+  charlist return to binary.
+- **Module resolution reused**: same directory scan logic as `glc test` (could
+  be extracted to shared module in future, but duplication is minimal).
+- **All private functions included**: LeetCode needs the complete code (not
+  just the exported function). The conversion strips directives only, keeping
+  all function definitions.
+
+### Final state
+
+- 44 tests, all passing (47 with solution test files present)
+- New modules: `submit`, `erlang_convert`
+- New FFI: `gleeam_code_submit_ffi.erl` (os_cmd, sleep)
+- Erlang conversion verified against actual `gleam build` output
+- Submit API awaits live testing with session key

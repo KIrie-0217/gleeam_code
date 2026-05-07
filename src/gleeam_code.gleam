@@ -3,6 +3,7 @@ import gleam/io
 import gleeam_code/auth
 import gleeam_code/fetch
 import gleeam_code/init
+import gleeam_code/submit
 import gleeam_code/test_cmd
 
 pub type GlobalOpts {
@@ -59,7 +60,11 @@ pub fn main() -> Nil {
         Ok(_) -> Nil
         Error(msg) -> io.println("Error: " <> msg)
       }
-    Ok(Submit(target)) -> io.println("TODO: glc submit " <> target)
+    Ok(Submit(target)) ->
+      case submit.run(opts.directory, target, io.println) {
+        Ok(_) -> Nil
+        Error(msg) -> io.println("Error: " <> msg)
+      }
     Error(msg) -> io.println(msg)
   }
 }

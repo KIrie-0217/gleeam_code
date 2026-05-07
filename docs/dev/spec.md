@@ -13,7 +13,7 @@
 - [x] `glc auth` — prompt and save session cookie (with y/N guards)
 - [x] `glc fetch` — LeetCode GraphQL client, Gleam stub + test generation
 - [x] `glc test` — run EUnit for a specific problem's test module
-- [ ] `glc submit` — Erlang conversion + LeetCode submit + result display
+- [x] `glc submit` — Erlang conversion + LeetCode submit + result display
 
 ### Phase 2
 
@@ -376,12 +376,21 @@ Testing strategy:
 
 ### Step 6: `glc submit`
 
-- Run `gleam build --target erlang`
-- Read generated `.erl` file
-- Strip `-module`, `-compile`, `-define`, `-file`, `-export` directives
-- Extract target function's `-spec` and body
-- Submit via LeetCode GraphQL API (`lang: "erlang"`)
-- Poll for result and display (accepted/wrong answer/runtime/memory)
+- Module: `src/gleeam_code/submit.gleam`
+- Signature: `pub fn run(base_dir: String, target: String, print: fn(String) -> Nil) -> Result(Nil, String)`
+- Erlang conversion: `src/gleeam_code/erlang_convert.gleam`
+- FFI: `src/gleeam_code_submit_ffi.erl` (os:cmd wrapper, timer:sleep wrapper)
+
+Flow:
+1. Require session (error if not set)
+2. Resolve module name (directory scan, same as `glc test`)
+3. `gleam build --target erlang` via `os:cmd`
+4. Read `.erl` from `build/dev/erlang/gleeam_code/_gleam_artefacts/`
+5. Strip directives: `-module`, `-compile`, `-define`, `-export`, `-file`,
+   `-if`/`-else`/`-endif`, `?MODULEDOC(...)` blocks
+6. POST to `/problems/<slug>/submit/` (not GraphQL — REST endpoint)
+7. Poll `/submissions/detail/<id>/check/` until state is SUCCESS
+8. Display result (Accepted/Wrong Answer + runtime + memory)
 
 ## Phased Implementation
 
