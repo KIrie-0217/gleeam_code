@@ -11,7 +11,7 @@
 - [x] `glc init` — create `solutions/`, `.glc.toml`, check `gleam.toml`
 - [x] Global `-C <dir>` option + `parse_global` + Architecture conventions
 - [x] `glc auth` — prompt and save session cookie (with y/N guards)
-- [ ] `glc fetch` — LeetCode GraphQL client, stub/test/problem generation
+- [x] `glc fetch` — LeetCode GraphQL client, Gleam stub + test generation
 - [ ] `glc test` — run `gleam test` for a specific problem
 - [ ] `glc submit` — Erlang conversion + LeetCode submit + result display
 

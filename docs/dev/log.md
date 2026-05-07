@@ -101,3 +101,65 @@ Added development guidelines based on mistakes encountered:
 - 34 tests, all passing, no warnings
 - New modules: `init`, `auth`
 - New FFI: `gleeam_code_io_ffi.erl` (stdin), `gleeam_code_auth_test_ffi.erl` (test helper)
+
+## 2026-05-07: Step 4 — `glc fetch`
+
+### Overview
+
+Implemented full problem fetch pipeline: LeetCode GraphQL API → Erlang spec
+parsing → Gleam code generation → file output.
+
+### Module structure
+
+- `src/gleeam_code/leetcode.gleam` — GraphQL client (HTTP + JSON decode)
+- `src/gleeam_code/codegen.gleam` — Erlang spec → Gleam stub/test generation
+- `src/gleeam_code/fetch.gleam` — command entry point, flow orchestration
+
+### API findings
+
+- LeetCode GraphQL at `https://leetcode.com/graphql` — no auth needed for free problems
+- `questionContent` query returns: content (HTML), codeSnippets, exampleTestcaseList,
+  questionFrontendId, titleSlug, title, difficulty, isPaidOnly
+- `questionList` with `searchKeywords` resolves number → slug
+- `exampleTestcaseList` contains inputs only (newline-separated per example)
+- Expected outputs must be extracted from HTML `content` field
+
+### Design decisions
+
+- **No `problem.md`**: solution.gleam has module comment with URL + difficulty.
+  User clicks URL to read full problem. Avoids HTML parsing complexity.
+- **Directory layout**: `src/solutions/p0001_two_sum/solution.gleam` + matching
+  `test/solutions/` — compatible with `gleam build` / `gleam test` natively.
+- **Module naming**: `p` prefix required (Gleam modules must start with lowercase
+  letter, not digit). Format: `p` + zero-padded 4-digit number + `_` + snake_slug.
+- **Auth optional for fetch**: session attached if available, omitted otherwise.
+  Premium problems detected via `content: null` + `isPaidOnly: true`.
+- **Test generation**: `let assert` pattern (no testing library dependency).
+  Expected outputs extracted from HTML via regex on `<strong>Output:</strong>`.
+  Falls back to `todo` if extraction fails.
+- **`glc init` updated**: now creates `src/solutions/` + `test/solutions/`
+  instead of top-level `solutions/`.
+
+### Erlang spec parsing
+
+Parses `-spec` line from LeetCode's Erlang snippet:
+- Splits function name, parameters (Name :: Type), return type
+- Handles nested brackets for list types via depth-tracked comma splitting
+- CamelCase → snake_case conversion for param names
+
+### Type mapping (Phase 1)
+
+| Erlang | Gleam |
+|---|---|
+| `integer()` | `Int` |
+| `float()` | `Float` |
+| `boolean()` | `Bool` |
+| `unicode:chardata()` | `String` |
+| `unicode:unicode_binary()` | `String` |
+| `[T]` | `List(T)` (recursive) |
+
+### Final state
+
+- 42 tests, all passing
+- New modules: `leetcode`, `codegen`, `fetch`
+- Verified with: `glc fetch two-sum`, `glc fetch 14` (number → slug resolution)
