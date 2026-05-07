@@ -11,6 +11,7 @@ pub type GlobalOpts {
 }
 
 pub type Command {
+  Version
   Init
   Auth
   Fetch(target: String)
@@ -27,6 +28,7 @@ pub fn parse_global(args: List(String)) -> #(GlobalOpts, List(String)) {
 
 pub fn route(args: List(String)) -> Result(Command, String) {
   case args {
+    ["--version"] | ["-v"] -> Ok(Version)
     ["init"] -> Ok(Init)
     ["auth"] -> Ok(Auth)
     ["fetch", target] -> Ok(Fetch(target))
@@ -40,6 +42,7 @@ pub fn route(args: List(String)) -> Result(Command, String) {
 pub fn main() -> Nil {
   let #(opts, rest) = parse_global(argv.load().arguments)
   case route(rest) {
+    Ok(Version) -> io.println("glc " <> version())
     Ok(Init) ->
       case init.run(opts.directory, io.println) {
         Ok(_) -> Nil
@@ -68,6 +71,9 @@ pub fn main() -> Nil {
     Error(msg) -> io.println(msg)
   }
 }
+
+@external(erlang, "gleeam_code_version_ffi", "get_version")
+pub fn version() -> String
 
 pub fn usage() -> String {
   "glc - Gleam LeetCode CLI

@@ -14,6 +14,9 @@
 - [x] `glc fetch` — LeetCode GraphQL client, Gleam stub + test generation
 - [x] `glc test` — run EUnit for a specific problem's test module
 - [x] `glc submit` — Erlang conversion + LeetCode submit + result display
+- [x] `--version` flag (runtime version from `.app` metadata via FFI)
+- [x] `gleescript` escript build (standalone `glc` binary)
+- [x] `flake.nix` for Nix distribution
 
 ### Phase 2
 
@@ -22,7 +25,6 @@
 - [ ] `glc list` — list fetched problems
 - [ ] Remote test execution (`interpretSolution`)
 - [ ] Windows support (`USERPROFILE` for home directory)
-- [ ] `glc` escript binary via `gleescript` (lpil)
 - [ ] Shell completion (`glc completion bash/zsh/fish`)
 
 ## Overview
@@ -39,7 +41,7 @@ Write solutions in Gleam, compile to Erlang, and submit to LeetCode as Erlang.
 gleam run -- <command> [args]    # e.g. gleam run -- fetch two-sum
 ```
 
-### Building as standalone binary (Phase 2)
+### Building as standalone binary
 
 Uses `gleescript` (lpil) to produce an escript binary. Requires Erlang/OTP on the host.
 
@@ -47,6 +49,39 @@ Uses `gleescript` (lpil) to produce an escript binary. Requires Erlang/OTP on th
 gleam run -m gleescript          # produces ./glc escript
 ./glc fetch two-sum
 ```
+
+### Installing via Nix
+
+```sh
+nix profile install github:KIrie-0217/gleeam_code
+glc fetch two-sum
+```
+
+Or in a user's `flake.nix`:
+```nix
+inputs.gleeam_code.url = "github:KIrie-0217/gleeam_code";
+# then: gleeam_code.packages.${system}.default
+```
+
+## Versioning
+
+Source of truth: `version` field in `gleam.toml`.
+
+The Gleam build tool embeds this into the `.app` metadata file. At runtime,
+`application:get_key(gleeam_code, vsn)` retrieves it via FFI — no manual
+synchronization needed.
+
+```sh
+glc --version   # → "glc 0.1.0"
+```
+
+## Distribution
+
+| Channel | Method | User requirement |
+|---|---|---|
+| Source | `git clone` + `gleam run -m gleescript` | Gleam + Erlang |
+| GitHub Releases | Download `glc` escript | Erlang |
+| Nix flake | `nix profile install github:...` | Nix |
 
 ## Commands
 
@@ -392,6 +427,16 @@ Flow:
 7. Poll `/submissions/detail/<id>/check/` until state is SUCCESS
 8. Display result (Accepted/Wrong Answer + runtime + memory)
 
+### Step 7: Versioning and distribution
+
+- `--version` flag: FFI via `application:get_key(gleeam_code, vsn)` after `application:load/1`
+- FFI: `src/gleeam_code_version_ffi.erl` — returns version string from `.app` metadata
+- `gleescript` added as dev dependency, produces `./glc` escript
+- `flake.nix` at repo root: exports `packages.<system>.default`
+  - Builds via `gleam export erlang-shipment`
+  - Wraps entrypoint with `makeWrapper` to inject Erlang on PATH
+  - Also provides `devShells.default` with gleam + erlang
+
 ## Phased Implementation
 
 ### Phase 1 (MVP)
@@ -403,6 +448,8 @@ Target: array, string, and numeric problems (no TreeNode/ListNode).
 - `glc fetch` — fetch problem, generate Gleam stub + tests (auth optional for free problems)
 - `glc test` — run local tests
 - `glc submit` — Erlang conversion (strip module/export only) + submit
+- `glc --version` — runtime version from `.app` metadata
+- Distribution: gleescript escript + Nix flake
 - Gleam stdlib usage: not supported. Users write pure Gleam or use `@external` for Erlang stdlib calls.
 
 ### Phase 2

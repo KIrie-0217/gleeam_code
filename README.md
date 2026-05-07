@@ -3,43 +3,59 @@
 A Gleam CLI tool for solving LeetCode problems.
 Write solutions in Gleam, compile to Erlang, and submit to LeetCode.
 
-## Requirements
+## Installation
 
-- [Gleam](https://gleam.run/) >= 1.0
-- Erlang/OTP >= 26
+### Nix (recommended)
 
-## Setup
+```sh
+nix profile install github:KIrie-0217/gleeam_code
+```
+
+Or add to your `flake.nix`:
+```nix
+inputs.gleeam_code.url = "github:KIrie-0217/gleeam_code";
+# then: gleeam_code.packages.${system}.default
+```
+
+### From source
+
+Requires [Gleam](https://gleam.run/) >= 1.0 and Erlang/OTP >= 26.
 
 ```sh
 git clone --recurse-submodules https://github.com/KIrie-0217/gleeam_code.git
 cd gleeam_code
-gleam build
+gleam run -m gleescript    # produces ./gleeam_code
+mv gleeam_code ~/.local/bin/glc
 ```
+
+### GitHub Releases
+
+Download the `glc` escript from [Releases](https://github.com/KIrie-0217/gleeam_code/releases). Requires Erlang/OTP on the host.
 
 ## Usage
 
 ```sh
-# Initialize project (creates src/solutions/ and test/solutions/)
-gleam run -- init
-
-# Save your LeetCode session cookie
-gleam run -- auth
-
-# Fetch a problem (by slug or number)
-gleam run -- fetch two-sum
-gleam run -- fetch 14
-
-# Run tests for a specific problem
-gleam run -- test two-sum
-
-# Submit solution to LeetCode
-gleam run -- submit two-sum
+glc init                    # Initialize project
+glc auth                    # Save LeetCode session cookie
+glc fetch two-sum           # Fetch problem (by slug or number)
+glc fetch 14
+glc test two-sum            # Run tests for a problem
+glc submit two-sum          # Submit solution to LeetCode
+glc --version               # Show version
 ```
 
 ### Global options
 
 ```sh
-gleam run -- -C /path/to/project fetch two-sum
+glc -C /path/to/project fetch two-sum
+```
+
+### Development mode
+
+If running from source without building the escript:
+
+```sh
+gleam run -- fetch two-sum
 ```
 
 ## How it works
@@ -63,8 +79,10 @@ Free problems can be fetched without authentication.
 ## Development
 
 ```sh
-gleam test    # Run all unit tests
-gleam build   # Build the project
+gleam test              # Run all unit tests
+gleam build             # Build the project
+gleam run -m gleescript # Build standalone escript
+nix build              # Build via Nix
 ```
 
 ### Contributing

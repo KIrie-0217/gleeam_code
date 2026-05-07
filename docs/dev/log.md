@@ -261,3 +261,47 @@ src/gleeam_code/
 - Added `internal_modules` glob to `gleam.toml` to mark them non-public
 - FFI `.erl` files remain in `src/` root (Erlang module naming requires flat placement)
 - All 44 tests pass unchanged
+
+## 2026-05-08: Step 7 — Versioning and distribution
+
+### `--version` flag
+
+- FFI: `src/gleeam_code_version_ffi.erl` — calls `application:load/1` then
+  `application:get_key(gleeam_code, vsn)` to read version from `.app` metadata
+- Source of truth: `gleam.toml` `version` field → compiled into `.app` by Gleam
+  build tool → read at runtime via FFI. No manual synchronization needed.
+- Output: `glc 1.0.0`
+
+### gleescript escript build
+
+- Added `gleescript` as dev dependency
+- `gleam run -m gleescript` produces `./gleeam_code` (escript)
+- Rename to `glc` for distribution (gleescript uses package name from gleam.toml)
+- Single file, portable across any system with Erlang/OTP installed
+
+### Nix flake
+
+- `flake.nix` exports `packages.<system>.default` and `devShells.<system>.default`
+- Builds via `gleam export erlang-shipment` (produces directory of .beam files)
+- `makeWrapper` injects Erlang on PATH for the entrypoint
+- Users install with `nix profile install github:KIrie-0217/gleeam_code`
+- Version extracted from `gleam.toml` at eval time (no duplication)
+- Verified: `nix build` + `result/bin/glc --version` → `glc 1.0.0`
+
+### Key decision: version source
+
+Evaluated options for `--version`:
+- A) Hardcoded const — manual sync risk
+- B) Build script rewrites const — CI dependency
+- C) Read `gleam.toml` at runtime — file not present in escript/shipment
+- D) Build-time code generation — no Gleam macro system
+- **E) `.app` metadata via FFI** — chosen. Zero maintenance, works in all
+  distribution formats (dev, escript, erlang-shipment, Nix)
+
+### Final state
+
+- 44 tests, all passing
+- New FFI: `gleeam_code_version_ffi.erl`
+- New files: `flake.nix`, `flake.lock`
+- New dependency: `gleescript` (dev only)
+- Verified on: `gleam run`, gleescript escript, Nix build
