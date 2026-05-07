@@ -102,7 +102,7 @@ nix build              # Build via Nix
 
 ### Contributing
 
-This project includes a [Gleam LLM Wiki](docs/gleam-wiki/) as a submodule
+This project includes a [Gleam LLM Wiki](https://github.com/KIrie-0217/gleam-llm-wiki) as a submodule
 for AI-assisted development. If contributing with an LLM agent, initialize
 the submodule and point your agent at `docs/gleam-wiki/AGENTS.md` for
 Gleam language reference.
