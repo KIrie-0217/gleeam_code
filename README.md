@@ -58,6 +58,21 @@ If running from source without building the escript:
 gleam run -- fetch two-sum
 ```
 
+## Limitations
+
+> [!CAUTION]
+> **TreeNode / ListNode problems are not supported yet.** Problems that use
+> linked lists or binary trees (e.g. "Add Two Numbers", "Invert Binary Tree")
+> cannot be solved with glc at this time. Stick to array, string, and numeric
+> problems.
+
+> [!CAUTION]
+> **Gleam standard library is not available in submissions.** LeetCode requires
+> single-file submission, and `gleam_stdlib` functions (`list.map`, `dict.get`,
+> etc.) compile to separate Erlang modules that are not present on the judge.
+> Write solutions using pattern matching, recursion, and basic operators, or use
+> `@external` to call Erlang stdlib functions directly.
+
 ## How it works
 
 1. `glc fetch` retrieves the problem from LeetCode's GraphQL API and generates:
