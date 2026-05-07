@@ -18,6 +18,7 @@ pub fn run(
   use module_name <- result.try(resolve_module(base_dir, target))
 
   let slug = extract_slug(module_name)
+  let question_id = extract_question_id(module_name)
 
   print("Building solution...")
   use _ <- result.try(build_erlang())
@@ -33,10 +34,17 @@ pub fn run(
   let converted = erlang_convert.convert(erl_source)
   print("Submitting to LeetCode as Erlang...")
 
-  use submission_id <- result.try(submit_to_leetcode(slug, converted, session))
+  use csrf <- result.try(fetch_csrf(session))
+  use submission_id <- result.try(submit_to_leetcode(
+    slug,
+    question_id,
+    converted,
+    session,
+    csrf,
+  ))
   print("Submitted! Checking result...")
 
-  use result <- result.try(poll_result(submission_id, session, 0))
+  use result <- result.try(poll_result(submission_id, session, csrf, 0))
   print(format_result(result))
 
   Ok(Nil)
@@ -120,6 +128,79 @@ fn extract_slug(module_name: String) -> String {
   }
 }
 
+fn extract_question_id(module_name: String) -> String {
+  // module_name is "p0001_two_sum" → question_id is "1"
+  let id_part =
+    module_name
+    |> string.drop_start(1)
+    |> string.split_once("_")
+  case id_part {
+    Ok(#(num, _)) -> drop_leading_zeros(num)
+    Error(_) -> "0"
+  }
+}
+
+fn drop_leading_zeros(s: String) -> String {
+  case string.pop_grapheme(s) {
+    Ok(#("0", rest)) if rest != "" -> drop_leading_zeros(rest)
+    _ -> s
+  }
+}
+
+fn fetch_csrf(session: String) -> Result(String, String) {
+  let req =
+    request.new()
+    |> request.set_method(http.Post)
+    |> request.set_host("leetcode.com")
+    |> request.set_path("/graphql")
+    |> request.set_scheme(http.Https)
+    |> request.set_body("{\"query\":\"{ user { username } }\"}")
+    |> request.prepend_header("content-type", "application/json")
+    |> request.prepend_header("cookie", "LEETCODE_SESSION=" <> session)
+
+  case httpc.send(req) {
+    Error(_) -> Error("Failed to connect to LeetCode for CSRF")
+    Ok(resp) -> extract_csrf_from_headers(resp.headers)
+  }
+}
+
+fn extract_csrf_from_headers(
+  headers: List(#(String, String)),
+) -> Result(String, String) {
+  case headers {
+    [] -> Error("CSRF token not found in response")
+    [#(name, value), ..rest] ->
+      case string.lowercase(name) == "set-cookie"
+        && string.contains(value, "csrftoken=")
+      {
+        True -> {
+          let token =
+            value
+            |> string.split("csrftoken=")
+            |> fn(parts) {
+              case parts {
+                [_, after, ..] ->
+                  after
+                  |> string.split(";")
+                  |> fn(p) {
+                    case p {
+                      [t, ..] -> t
+                      [] -> ""
+                    }
+                  }
+                _ -> ""
+              }
+            }
+          case token {
+            "" -> Error("Failed to extract CSRF token")
+            t -> Ok(t)
+          }
+        }
+        False -> extract_csrf_from_headers(rest)
+      }
+  }
+}
+
 fn build_erlang() -> Result(Nil, String) {
   let output = os_cmd("gleam build --target erlang 2>&1")
   case string.contains(output, "error:") {
@@ -145,14 +226,17 @@ pub type SubmitResult {
 
 fn submit_to_leetcode(
   slug: String,
+  question_id: String,
   code: String,
   session: String,
+  csrf: String,
 ) -> Result(String, String) {
   let body =
     json.to_string(
       json.object([
         #("lang", json.string("erlang")),
-        #("question_slug", json.string(slug)),
+        #("questionSlug", json.string(slug)),
+        #("question_id", json.string(question_id)),
         #("typed_code", json.string(code)),
       ]),
     )
@@ -165,15 +249,28 @@ fn submit_to_leetcode(
     |> request.set_scheme(http.Https)
     |> request.set_body(body)
     |> request.prepend_header("content-type", "application/json")
-    |> request.prepend_header("cookie", "LEETCODE_SESSION=" <> session)
-    |> request.prepend_header("referer", "https://leetcode.com/problems/" <> slug <> "/")
+    |> request.prepend_header(
+      "cookie",
+      "LEETCODE_SESSION=" <> session <> "; csrftoken=" <> csrf,
+    )
+    |> request.prepend_header("x-csrftoken", csrf)
+    |> request.prepend_header(
+      "referer",
+      "https://leetcode.com/problems/" <> slug <> "/",
+    )
 
   case httpc.send(req) {
     Error(_) -> Error("Failed to connect to LeetCode")
     Ok(resp) ->
       case resp.status {
         200 -> parse_submit_response(resp.body)
-        _ -> Error("Submit failed with status: " <> string.inspect(resp.status))
+        _ ->
+          Error(
+            "Submit failed with status: "
+            <> string.inspect(resp.status)
+            <> " - "
+            <> resp.body,
+          )
       }
   }
 }
@@ -193,15 +290,17 @@ fn parse_submit_response(body: String) -> Result(String, String) {
 fn poll_result(
   submission_id: String,
   session: String,
+  csrf: String,
   attempts: Int,
 ) -> Result(SubmitResult, String) {
   case attempts > 20 {
     True -> Error("Timed out waiting for submission result")
     False -> {
       sleep(1000)
-      case check_submission(submission_id, session) {
+      case check_submission(submission_id, session, csrf) {
         Ok(result) -> Ok(result)
-        Error("pending") -> poll_result(submission_id, session, attempts + 1)
+        Error("pending") ->
+          poll_result(submission_id, session, csrf, attempts + 1)
         Error(err) -> Error(err)
       }
     }
@@ -211,6 +310,7 @@ fn poll_result(
 fn check_submission(
   submission_id: String,
   session: String,
+  csrf: String,
 ) -> Result(SubmitResult, String) {
   let req =
     request.new()
@@ -218,7 +318,10 @@ fn check_submission(
     |> request.set_host("leetcode.com")
     |> request.set_path("/submissions/detail/" <> submission_id <> "/check/")
     |> request.set_scheme(http.Https)
-    |> request.prepend_header("cookie", "LEETCODE_SESSION=" <> session)
+    |> request.prepend_header(
+      "cookie",
+      "LEETCODE_SESSION=" <> session <> "; csrftoken=" <> csrf,
+    )
 
   case httpc.send(req) {
     Error(_) -> Error("Failed to check submission status")
