@@ -1,5 +1,10 @@
 import argv
 import gleam/io
+import gleeam_code/init
+
+pub type GlobalOpts {
+  GlobalOpts(directory: String)
+}
 
 pub type Command {
   Init
@@ -7,6 +12,13 @@ pub type Command {
   Fetch(target: String)
   Test(target: String)
   Submit(target: String)
+}
+
+pub fn parse_global(args: List(String)) -> #(GlobalOpts, List(String)) {
+  case args {
+    ["-C", dir, ..rest] -> #(GlobalOpts(directory: dir), rest)
+    _ -> #(GlobalOpts(directory: "."), args)
+  }
 }
 
 pub fn route(args: List(String)) -> Result(Command, String) {
@@ -22,8 +34,13 @@ pub fn route(args: List(String)) -> Result(Command, String) {
 }
 
 pub fn main() -> Nil {
-  case route(argv.load().arguments) {
-    Ok(Init) -> io.println("TODO: glc init")
+  let #(opts, rest) = parse_global(argv.load().arguments)
+  case route(rest) {
+    Ok(Init) ->
+      case init.run(opts.directory, io.println) {
+        Ok(_) -> Nil
+        Error(msg) -> io.println("Error: " <> msg)
+      }
     Ok(Auth) -> io.println("TODO: glc auth")
     Ok(Fetch(target)) -> io.println("TODO: glc fetch " <> target)
     Ok(Test(target)) -> io.println("TODO: glc test " <> target)

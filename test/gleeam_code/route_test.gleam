@@ -1,4 +1,18 @@
-import gleeam_code.{Auth, Fetch, Init, Submit, Test}
+import gleeam_code.{Auth, Fetch, GlobalOpts, Init, Submit, Test}
+
+pub fn parse_global_with_directory_test() {
+  let assert #(GlobalOpts(directory: "/tmp/proj"), ["init"]) =
+    gleeam_code.parse_global(["-C", "/tmp/proj", "init"])
+}
+
+pub fn parse_global_default_test() {
+  let assert #(GlobalOpts(directory: "."), ["fetch", "two-sum"]) =
+    gleeam_code.parse_global(["fetch", "two-sum"])
+}
+
+pub fn parse_global_empty_test() {
+  let assert #(GlobalOpts(directory: "."), []) = gleeam_code.parse_global([])
+}
 
 pub fn route_init_test() {
   let assert Ok(Init) = gleeam_code.route(["init"])

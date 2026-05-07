@@ -53,9 +53,18 @@ gleam run -m gleescript          # produces ./glc escript
 
 Initialize the current directory for glc use. Requires an existing Gleam project (`gleam.toml`).
 
-- Creates `solutions/` directory
-- Creates `.glc.toml` (project-level config)
-- Errors if `gleam.toml` is not found (guide user to run `gleam new` first)
+- Checks `base_dir/gleam.toml` exists → Error if not found
+- Creates `base_dir/solutions/` directory (skip if exists, idempotent)
+- Creates `base_dir/.glc.toml` (skip if exists, never overwrite)
+- Each step notifies via `print` on creation or skip
+- Error message: `"gleam.toml not found. Run 'gleam new <project>' first."`
+
+`.glc.toml` initial content:
+```toml
+# glc project config
+[project]
+solutions_dir = "solutions"
+```
 
 ### `glc auth`
 
@@ -230,6 +239,48 @@ Config file is plain text (no TOML parser needed).
   Only 5 functions needed; Erlang `file`/`filelib` modules provide the primitives
   directly. See `src/gleeam_code_file_ffi.erl`.
 
+## Architecture
+
+### Command function signature
+
+All command modules (`init`, `auth`, `fetch`, `test`, `submit`) follow this
+pattern:
+
+```gleam
+pub fn run(base_dir: String, print: fn(String) -> Nil) -> Result(Nil, String)
+```
+
+- `base_dir`: working directory for the command (main passes `"."` or the
+  value from `-C`)
+- `print`: callback for progress messages. Main passes `io.println`; tests
+  pass a mock/no-op function
+- `Result(Nil, String)`: Ok = completed, Error = abort reason
+- Commands do NOT call `io.println` directly — all user-facing output goes
+  through `print`
+
+This separates IO concerns from logic, enables unit testing without side
+effects, and allows future output modes (e.g. `--quiet`, `--json`) by
+swapping the `print` function.
+
+### Global options
+
+```
+glc [-C <dir>] <command> [args]
+```
+
+- `-C <dir>`: set the working directory (default: `"."`)
+- Global options are parsed before command routing via `parse_global`
+
+```gleam
+pub type GlobalOpts {
+  GlobalOpts(directory: String)
+}
+
+pub fn parse_global(args: List(String)) -> #(GlobalOpts, List(String))
+```
+
+The `directory` value is passed as `base_dir` to each command's `run()`.
+
 ## Implementation Plan
 
 ### Step 1: Project foundation
@@ -242,9 +293,12 @@ Config file is plain text (no TOML parser needed).
 
 ### Step 2: `glc init`
 
-- Check `gleam.toml` exists in current directory
-- Create `solutions/` directory
-- Create `.glc.toml` marker file
+- Module: `src/gleeam_code/init.gleam`
+- Signature: `pub fn run(base_dir: String, print: fn(String) -> Nil) -> Result(Nil, String)`
+- Check `base_dir/gleam.toml` exists (via `file.exists`)
+- Create `base_dir/solutions/` (via `file.mkdir`, skip if exists)
+- Create `base_dir/.glc.toml` with initial content (via `file.write`, skip if exists)
+- Tests: `test/gleeam_code/init_test.gleam` — uses temp directory as `base_dir`
 
 ### Step 3: `glc auth`
 
