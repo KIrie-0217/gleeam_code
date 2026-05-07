@@ -5,9 +5,9 @@ import gleam/json
 import gleam/dynamic/decode
 import gleam/result
 import gleam/string
-import gleeam_code/config
-import gleeam_code/erlang_convert
-import gleeam_code/file
+import gleeam_code/internal/config
+import gleeam_code/internal/erlang_convert
+import gleeam_code/internal/file
 
 pub fn run(
   base_dir: String,

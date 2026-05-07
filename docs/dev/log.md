@@ -235,4 +235,29 @@ functions). LeetCode's judge adds `-module(solution)` and `-export` itself.
 - New modules: `submit`, `erlang_convert`
 - New FFI: `gleeam_code_submit_ffi.erl` (os_cmd, sleep)
 - Erlang conversion verified against actual `gleam build` output
-- Submit API awaits live testing with session key
+- Submit API verified with live session: two-sum Accepted (97ms, 48.6 MB)
+
+## 2026-05-08: Refactor — `internal/` module separation
+
+### Motivation
+
+All modules were flat under `src/gleeam_code/`. As the project grows, separating
+command-layer modules (user-facing) from infrastructure modules (internal
+utilities) improves navigability and makes the public API surface explicit.
+
+### Structure after refactor
+
+```
+src/gleeam_code/
+  auth.gleam, fetch.gleam, init.gleam, submit.gleam, test_cmd.gleam  ← commands
+  internal/
+    codegen.gleam, config.gleam, erlang_convert.gleam, file.gleam, leetcode.gleam  ← infrastructure
+```
+
+### Changes
+
+- Moved 5 modules to `src/gleeam_code/internal/`
+- Updated all import paths (`gleeam_code/file` → `gleeam_code/internal/file`, etc.)
+- Added `internal_modules` glob to `gleam.toml` to mark them non-public
+- FFI `.erl` files remain in `src/` root (Erlang module naming requires flat placement)
+- All 44 tests pass unchanged

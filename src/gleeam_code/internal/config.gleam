@@ -3,7 +3,7 @@
 
 import envoy
 import gleam/string
-import gleeam_code/file
+import gleeam_code/internal/file
 
 const config_dir = ".gleeam"
 

@@ -1,7 +1,7 @@
 import envoy
 import gleeam_code/auth
-import gleeam_code/config
-import gleeam_code/file
+import gleeam_code/internal/config
+import gleeam_code/internal/file
 
 fn no_print(_msg: String) -> Nil {
   Nil

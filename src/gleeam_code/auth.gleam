@@ -1,6 +1,6 @@
 import envoy
 import gleam/string
-import gleeam_code/config
+import gleeam_code/internal/config
 
 pub fn run(
   _base_dir: String,

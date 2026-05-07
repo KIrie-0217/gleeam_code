@@ -2,7 +2,7 @@ import gleam/erlang/atom.{type Atom}
 import gleam/list
 import gleam/result
 import gleam/string
-import gleeam_code/file
+import gleeam_code/internal/file
 
 pub fn run(
   base_dir: String,

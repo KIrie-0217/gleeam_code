@@ -1,4 +1,4 @@
-import gleeam_code/file
+import gleeam_code/internal/file
 
 pub fn write_and_read_test() {
   let path = "test/tmp_test_file.txt"

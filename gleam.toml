@@ -1,6 +1,7 @@
 name = "gleeam_code"
 version = "1.0.0"
 target = "erlang"
+internal_modules = ["gleeam_code/internal", "gleeam_code/internal/*"]
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"

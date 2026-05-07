@@ -1,4 +1,4 @@
-import gleeam_code/codegen
+import gleeam_code/internal/codegen
 
 pub fn parse_erlang_spec_two_sum_test() {
   let snippet =

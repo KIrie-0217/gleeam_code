@@ -1,4 +1,4 @@
-import gleeam_code/erlang_convert
+import gleeam_code/internal/erlang_convert
 
 pub fn convert_strips_directives_test() {
   let input =

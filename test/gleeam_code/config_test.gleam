@@ -1,6 +1,6 @@
 import envoy
-import gleeam_code/config
-import gleeam_code/file
+import gleeam_code/internal/config
+import gleeam_code/internal/file
 
 pub fn get_session_from_env_test() {
   envoy.set("LEETCODE_SESSION", "test_cookie_123")

@@ -1,4 +1,4 @@
-import gleeam_code/file
+import gleeam_code/internal/file
 
 const glc_toml_content = "# glc project config
 [project]

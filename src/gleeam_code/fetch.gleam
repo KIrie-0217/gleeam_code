@@ -1,8 +1,8 @@
 import gleam/result
-import gleeam_code/codegen
-import gleeam_code/config
-import gleeam_code/file
-import gleeam_code/leetcode
+import gleeam_code/internal/codegen
+import gleeam_code/internal/config
+import gleeam_code/internal/file
+import gleeam_code/internal/leetcode
 
 pub fn run(
   base_dir: String,
