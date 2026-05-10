@@ -1,7 +1,14 @@
 name = "gleeam_code"
 version = "1.0.0"
+description = "A Gleam CLI tool for solving LeetCode problems"
+licences = ["MIT"]
 target = "erlang"
 internal_modules = ["gleeam_code/internal", "gleeam_code/internal/*"]
+
+[repository]
+type = "github"
+user = "KIrie-0217"
+repo = "gleeam_code"
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
