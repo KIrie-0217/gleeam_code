@@ -1,4 +1,6 @@
+import gleam/list
 import gleam/result
+import gleam/string
 import gleeam_code/internal/codegen
 import gleeam_code/internal/config
 import gleeam_code/internal/file
@@ -58,9 +60,19 @@ pub fn run(
   ))
   print("  Created test/" <> module_path <> "/solution_test.gleam")
 
+  let param_types =
+    spec.params
+    |> list.map(fn(p) { p.type_str })
+    |> string.join(",")
   use _ <- result.try(write_file(
     src_dir <> "/.glc_meta",
-    "entry_function=" <> spec.name <> "\n",
+    "entry_function="
+      <> spec.name
+      <> "\nparams="
+      <> param_types
+      <> "\nreturn_type="
+      <> spec.return_type
+      <> "\n",
   ))
 
   Ok(Nil)
