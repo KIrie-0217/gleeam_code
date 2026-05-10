@@ -1,10 +1,11 @@
 import gleam/string
 import gleeam_code/internal/codegen
+import gleeam_code/internal/spec_parser
 
 pub fn parse_erlang_spec_two_sum_test() {
   let snippet =
     "-spec two_sum(Nums :: [integer()], Target :: integer()) -> [integer()].\ntwo_sum(Nums, Target) ->\n  ."
-  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert Ok(spec) = spec_parser.parse_erlang_spec(snippet)
   let assert "two_sum" = spec.name
   let assert "List(Int)" = spec.return_type
   let assert [p1, p2] = spec.params
@@ -17,7 +18,7 @@ pub fn parse_erlang_spec_two_sum_test() {
 pub fn parse_erlang_spec_string_test() {
   let snippet =
     "-spec longest_common_prefix(Strs :: [unicode:unicode_binary()]) -> unicode:unicode_binary().\nlongest_common_prefix(Strs) ->\n  ."
-  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert Ok(spec) = spec_parser.parse_erlang_spec(snippet)
   let assert "longest_common_prefix" = spec.name
   let assert "String" = spec.return_type
   let assert [p1] = spec.params
@@ -26,28 +27,30 @@ pub fn parse_erlang_spec_string_test() {
 }
 
 pub fn erlang_type_to_gleam_test() {
-  let assert "Int" = codegen.erlang_type_to_gleam("integer()")
-  let assert "Float" = codegen.erlang_type_to_gleam("float()")
-  let assert "Bool" = codegen.erlang_type_to_gleam("boolean()")
-  let assert "String" = codegen.erlang_type_to_gleam("unicode:chardata()")
-  let assert "String" = codegen.erlang_type_to_gleam("unicode:unicode_binary()")
-  let assert "List(Int)" = codegen.erlang_type_to_gleam("[integer()]")
+  let assert "Int" = spec_parser.erlang_type_to_gleam("integer()")
+  let assert "Float" = spec_parser.erlang_type_to_gleam("float()")
+  let assert "Bool" = spec_parser.erlang_type_to_gleam("boolean()")
+  let assert "String" = spec_parser.erlang_type_to_gleam("unicode:chardata()")
+  let assert "String" =
+    spec_parser.erlang_type_to_gleam("unicode:unicode_binary()")
+  let assert "List(Int)" = spec_parser.erlang_type_to_gleam("[integer()]")
   let assert "List(String)" =
-    codegen.erlang_type_to_gleam("[unicode:unicode_binary()]")
+    spec_parser.erlang_type_to_gleam("[unicode:unicode_binary()]")
 }
 
 pub fn to_snake_case_test() {
-  let assert "nums" = codegen.to_snake_case("Nums")
-  let assert "target" = codegen.to_snake_case("Target")
-  let assert "title_slug" = codegen.to_snake_case("TitleSlug")
-  let assert "l1" = codegen.to_snake_case("L1")
+  let assert "nums" = spec_parser.to_snake_case("Nums")
+  let assert "target" = spec_parser.to_snake_case("Target")
+  let assert "title_slug" = spec_parser.to_snake_case("TitleSlug")
+  let assert "l1" = spec_parser.to_snake_case("L1")
 }
 
 pub fn format_module_name_test() {
-  let assert "p0001_two_sum" = codegen.format_module_name("1", "two-sum")
+  let assert "p0001_two_sum" = spec_parser.format_module_name("1", "two-sum")
   let assert "p0014_longest_common_prefix" =
-    codegen.format_module_name("14", "longest-common-prefix")
-  let assert "p0100_same_tree" = codegen.format_module_name("100", "same-tree")
+    spec_parser.format_module_name("14", "longest-common-prefix")
+  let assert "p0100_same_tree" =
+    spec_parser.format_module_name("100", "same-tree")
 }
 
 pub fn format_gleam_value_test() {
@@ -67,11 +70,11 @@ pub fn extract_outputs_test() {
 
 pub fn generate_solution_test() {
   let spec =
-    codegen.FunctionSpec(
+    spec_parser.FunctionSpec(
       name: "two_sum",
       params: [
-        codegen.Param(name: "nums", type_str: "List(Int)"),
-        codegen.Param(name: "target", type_str: "Int"),
+        spec_parser.Param(name: "nums", type_str: "List(Int)"),
+        spec_parser.Param(name: "target", type_str: "Int"),
       ],
       return_type: "List(Int)",
     )
@@ -83,21 +86,23 @@ pub fn generate_solution_test() {
 }
 
 pub fn erlang_type_to_gleam_tree_node_test() {
-  let assert "Option(TreeNode)" = codegen.erlang_type_to_gleam("#tree_node{}")
   let assert "Option(TreeNode)" =
-    codegen.erlang_type_to_gleam("'null' | #tree_node{}")
+    spec_parser.erlang_type_to_gleam("#tree_node{}")
+  let assert "Option(TreeNode)" =
+    spec_parser.erlang_type_to_gleam("'null' | #tree_node{}")
 }
 
 pub fn erlang_type_to_gleam_list_node_test() {
-  let assert "Option(ListNode)" = codegen.erlang_type_to_gleam("#list_node{}")
   let assert "Option(ListNode)" =
-    codegen.erlang_type_to_gleam("'null' | #list_node{}")
+    spec_parser.erlang_type_to_gleam("#list_node{}")
+  let assert "Option(ListNode)" =
+    spec_parser.erlang_type_to_gleam("'null' | #list_node{}")
 }
 
 pub fn parse_erlang_spec_tree_node_test() {
   let snippet =
     "-spec invert_tree(Root :: 'null' | #tree_node{}) -> 'null' | #tree_node{}.\ninvert_tree(Root) ->\n  ."
-  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert Ok(spec) = spec_parser.parse_erlang_spec(snippet)
   let assert "invert_tree" = spec.name
   let assert "Option(TreeNode)" = spec.return_type
   let assert [p1] = spec.params
@@ -108,7 +113,7 @@ pub fn parse_erlang_spec_tree_node_test() {
 pub fn parse_erlang_spec_list_node_test() {
   let snippet =
     "-spec reverse_list(Head :: 'null' | #list_node{}) -> 'null' | #list_node{}.\nreverse_list(Head) ->\n  ."
-  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert Ok(spec) = spec_parser.parse_erlang_spec(snippet)
   let assert "reverse_list" = spec.name
   let assert "Option(ListNode)" = spec.return_type
   let assert [p1] = spec.params
@@ -118,31 +123,31 @@ pub fn parse_erlang_spec_list_node_test() {
 
 pub fn uses_tree_node_test() {
   let spec =
-    codegen.FunctionSpec(
+    spec_parser.FunctionSpec(
       name: "invert_tree",
-      params: [codegen.Param(name: "root", type_str: "Option(TreeNode)")],
+      params: [spec_parser.Param(name: "root", type_str: "Option(TreeNode)")],
       return_type: "Option(TreeNode)",
     )
-  let assert True = codegen.uses_tree_node(spec)
-  let assert False = codegen.uses_list_node(spec)
+  let assert True = spec_parser.uses_tree_node(spec)
+  let assert False = spec_parser.uses_list_node(spec)
 }
 
 pub fn uses_list_node_test() {
   let spec =
-    codegen.FunctionSpec(
+    spec_parser.FunctionSpec(
       name: "reverse_list",
-      params: [codegen.Param(name: "head", type_str: "Option(ListNode)")],
+      params: [spec_parser.Param(name: "head", type_str: "Option(ListNode)")],
       return_type: "Option(ListNode)",
     )
-  let assert False = codegen.uses_tree_node(spec)
-  let assert True = codegen.uses_list_node(spec)
+  let assert False = spec_parser.uses_tree_node(spec)
+  let assert True = spec_parser.uses_list_node(spec)
 }
 
 pub fn generate_solution_tree_node_test() {
   let spec =
-    codegen.FunctionSpec(
+    spec_parser.FunctionSpec(
       name: "invert_tree",
-      params: [codegen.Param(name: "root", type_str: "Option(TreeNode)")],
+      params: [spec_parser.Param(name: "root", type_str: "Option(TreeNode)")],
       return_type: "Option(TreeNode)",
     )
   let result =

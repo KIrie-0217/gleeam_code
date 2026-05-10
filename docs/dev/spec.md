@@ -359,7 +359,7 @@ Config file is plain text (no TOML parser needed).
 
 ### Command function signature
 
-All command modules (`init`, `auth`, `fetch`, `test`, `submit`) follow this
+All command modules (`init`, `auth`, `fetch`, `test`, `submit`, `list_cmd`) follow this
 pattern:
 
 ```gleam
@@ -377,6 +377,26 @@ pub fn run(base_dir: String, print: fn(String) -> Nil) -> Result(Nil, String)
 This separates IO concerns from logic, enables unit testing without side
 effects, and allows future output modes (e.g. `--quiet`, `--json`) by
 swapping the `print` function.
+
+### Internal module structure
+
+Shared utilities live in `src/gleeam_code/internal/`:
+
+| Module | Responsibility |
+|---|---|
+| `char.gleam` | Character classification (`is_lowercase`, `is_digit`, `is_identifier`, etc.) |
+| `file.gleam` | File I/O via Erlang FFI |
+| `config.gleam` | Session cookie read/write |
+| `resolver.gleam` | Target → module name resolution, `is_numeric` (shared by test_cmd, submit) |
+| `meta.gleam` | `.glc_meta` file read/write (`SubmitMeta`, `find_value`, `save_status`) |
+| `spec_parser.gleam` | Erlang `-spec` parsing, type mapping, `FunctionSpec`/`Param` types |
+| `codegen.gleam` | Gleam source/test file generation |
+| `leetcode.gleam` | LeetCode GraphQL API client |
+| `erlang_convert.gleam` | Strip Gleam directives from compiled `.erl` |
+| `stdlib_scanner.gleam` | Detect stdlib calls in Erlang source |
+| `stdlib_extractor.gleam` | Extract function bodies from stdlib `.erl` files |
+| `stdlib_bundler.gleam` | Transitive resolve + rename + assemble stdlib bundle |
+| `tree_builder.gleam` | TreeNode/ListNode construction from level-order |
 
 ### Global options
 
@@ -430,8 +450,9 @@ The `directory` value is passed as `base_dir` to each command's `run()`.
 
 Modules:
 - `src/gleeam_code/fetch.gleam` — command entry point (`run`)
-- `src/gleeam_code/leetcode.gleam` — GraphQL client (HTTP request + JSON parse)
-- `src/gleeam_code/codegen.gleam` — Erlang spec → Gleam stub/test generation
+- `src/gleeam_code/internal/leetcode.gleam` — GraphQL client (HTTP request + JSON parse)
+- `src/gleeam_code/internal/spec_parser.gleam` — Erlang spec parsing, type mapping, FunctionSpec/Param types
+- `src/gleeam_code/internal/codegen.gleam` — Gleam stub/test generation (uses spec_parser types)
 
 Flow:
 1. Resolve input (slug or number) → `titleSlug`
@@ -453,9 +474,9 @@ Testing strategy:
 
 - Module: `src/gleeam_code/test_cmd.gleam`
 - Signature: `pub fn run(base_dir: String, target: String, print: fn(String) -> Nil) -> Result(Nil, String)`
-- Resolves slug/number → module name by scanning `test/solutions/` directory
+- Resolves slug/number → module name via `internal/resolver.gleam`
 - Runs EUnit directly on the target module via FFI (`eunit:test/2`)
-- FFI: `src/gleeam_code_test_runner_ffi.erl` (EUnit), `src/gleeam_code_test_cmd_ffi.erl` (directory listing)
+- FFI: `src/gleeam_code_test_runner_ffi.erl` (EUnit)
 - No subprocess needed — EUnit runs in the same BEAM instance
 
 ### Step 6: `glc submit`

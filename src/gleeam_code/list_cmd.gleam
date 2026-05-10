@@ -3,6 +3,7 @@ import gleam/list
 import gleam/result
 import gleam/string
 import gleeam_code/internal/file
+import gleeam_code/internal/meta
 
 pub type ProblemEntry {
   ProblemEntry(number: Int, slug: String, difficulty: String, status: String)
@@ -189,21 +190,8 @@ fn extract_difficulty(lines: List(String)) -> String {
 
 fn read_status(meta_path: String) -> String {
   case file.read(meta_path) {
-    Ok(content) -> find_meta_value(string.split(content, "\n"), "status")
+    Ok(content) -> meta.find_value(string.split(content, "\n"), "status")
     Error(_) -> ""
-  }
-}
-
-fn find_meta_value(lines: List(String), key: String) -> String {
-  case lines {
-    [] -> ""
-    [line, ..rest] ->
-      case string.starts_with(line, key <> "=") {
-        True ->
-          string.drop_start(line, string.length(key) + 1)
-          |> string.trim
-        False -> find_meta_value(rest, key)
-      }
   }
 }
 

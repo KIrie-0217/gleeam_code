@@ -5,6 +5,7 @@ import gleeam_code/internal/codegen
 import gleeam_code/internal/config
 import gleeam_code/internal/file
 import gleeam_code/internal/leetcode
+import gleeam_code/internal/spec_parser
 
 pub fn run(
   base_dir: String,
@@ -25,10 +26,10 @@ pub fn run(
     leetcode.describe_error,
   )
 
-  use spec <- result.try(codegen.parse_erlang_spec(problem.erlang_snippet))
+  use spec <- result.try(spec_parser.parse_erlang_spec(problem.erlang_snippet))
 
   let module_name =
-    codegen.format_module_name(problem.frontend_id, problem.title_slug)
+    spec_parser.format_module_name(problem.frontend_id, problem.title_slug)
   let module_path = "solutions/" <> module_name
 
   let src_dir = base_dir <> "/src/" <> module_path

@@ -7,6 +7,7 @@ import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
+import gleeam_code/internal/resolver
 
 pub type Problem {
   Problem(
@@ -61,7 +62,7 @@ pub fn resolve_slug(
   input: String,
   session: Result(String, String),
 ) -> Result(String, FetchError) {
-  case is_numeric(input) {
+  case resolver.is_numeric(input) {
     False -> Ok(input)
     True -> lookup_slug_by_number(input, session)
   }
@@ -238,19 +239,5 @@ fn parse_slug_response(
         Ok(#(_, slug)) -> Ok(slug)
         Error(_) -> Error(ProblemNotFound)
       }
-  }
-}
-
-fn is_numeric(s: String) -> Bool {
-  case string.to_graphemes(s) {
-    [] -> False
-    chars -> list.all(chars, fn(c) { is_digit(c) })
-  }
-}
-
-fn is_digit(c: String) -> Bool {
-  case c {
-    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" -> True
-    _ -> False
   }
 }

@@ -1,5 +1,6 @@
 import gleam/list
 import gleam/string
+import gleeam_code/internal/char
 
 pub type StdlibCall {
   StdlibCall(module: String, function: String)
@@ -20,7 +21,7 @@ fn scan_chars(
   case chars {
     [] -> acc
     [c, ..rest] ->
-      case is_identifier_char(c) {
+      case char.is_identifier(c) {
         True -> scan_chars(rest, [c, ..current], acc)
         False ->
           case c {
@@ -58,7 +59,7 @@ fn take_identifier(
   case chars {
     [] -> #(list.reverse(acc), [])
     [c, ..rest] ->
-      case is_identifier_char(c) {
+      case char.is_identifier(c) {
         True -> take_identifier(rest, [c, ..acc])
         False -> #(list.reverse(acc), chars)
       }
@@ -79,64 +80,4 @@ fn try_parse_module(chars: List(String)) -> Result(String, Nil) {
 
 fn is_stdlib_module(name: String) -> Bool {
   name == "gleam_stdlib" || string.starts_with(name, "gleam@")
-}
-
-fn is_identifier_char(c: String) -> Bool {
-  case c {
-    "a"
-    | "b"
-    | "c"
-    | "d"
-    | "e"
-    | "f"
-    | "g"
-    | "h"
-    | "i"
-    | "j"
-    | "k"
-    | "l"
-    | "m"
-    | "n"
-    | "o"
-    | "p"
-    | "q"
-    | "r"
-    | "s"
-    | "t"
-    | "u"
-    | "v"
-    | "w"
-    | "x"
-    | "y"
-    | "z" -> True
-    "A"
-    | "B"
-    | "C"
-    | "D"
-    | "E"
-    | "F"
-    | "G"
-    | "H"
-    | "I"
-    | "J"
-    | "K"
-    | "L"
-    | "M"
-    | "N"
-    | "O"
-    | "P"
-    | "Q"
-    | "R"
-    | "S"
-    | "T"
-    | "U"
-    | "V"
-    | "W"
-    | "X"
-    | "Y"
-    | "Z" -> True
-    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" -> True
-    "_" | "@" -> True
-    _ -> False
-  }
 }
