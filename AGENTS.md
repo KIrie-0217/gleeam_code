@@ -3,14 +3,6 @@
 > A Gleam CLI tool for solving LeetCode problems.
 > Write solutions in Gleam, auto-compile to Erlang, and submit to LeetCode.
 
-## Specification
-
-See [docs/dev/spec.md](docs/dev/spec.md) for the full specification including:
-- Command details (auth, fetch, test, submit)
-- LeetCode API integration
-- Erlang conversion strategy
-- Type mapping and phased implementation plan
-
 ## Gleam Knowledge Base
 
 This project includes a Gleam LLM Wiki as a submodule:
@@ -40,23 +32,19 @@ problems. In particular:
 - Language: Gleam (compiles to Erlang/BEAM)
 - Purpose: fetch, test, and submit LeetCode solutions written in Gleam
 
+Each source directory contains a `_index.md` describing its modules.
+Consult these for orientation before modifying code in that directory.
+
 ### Key workflow
 
 ```
 glc init                        # Initialize project (requires gleam.toml)
 glc auth                        # Save LeetCode session cookie
+glc list [options]              # List fetched problems with filters
 glc fetch <slug-or-number>      # Fetch problem + generate Gleam template
 glc test <slug-or-number>       # Build + run local tests with sample cases
 glc submit <slug-or-number>     # Build + convert to Erlang + submit to LeetCode
 ```
-
-### Erlang conversion strategy
-
-Gleam source is compiled via `gleam build --target erlang`, then the generated
-`.erl` file is post-processed to match LeetCode's expected Erlang format:
-- Strip `-module`, `-export`, `-compile`, `-define`, `-file` directives
-- Extract the target function's `-spec` and body
-- LeetCode adds `-module(solution)` and `-export` automatically
 
 ## Development Guidelines
 
@@ -68,13 +56,9 @@ Do not create multiple modules before testing any of them.
 Always run `gleam format src test` before committing. CI enforces
 `gleam format --check`.
 
-After completing a feature or module:
-1. Update `docs/dev/spec.md` — mark the item as done in the status checklist,
-   update command/step details to reflect the actual implementation.
-2. Update `docs/dev/log.md` — add an entry describing what was built, design
-   decisions made, and any issues encountered. Include rationale for non-obvious
-   choices so future readers understand the "why".
-3. Commit the changes.
+After completing a feature or modifying a directory's modules, update the
+corresponding `_index.md` if the change affects module responsibility or
+adds/removes modules.
 
 ### Erlang FFI
 
