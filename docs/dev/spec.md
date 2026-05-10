@@ -21,7 +21,7 @@
 ### Phase 2
 
 - [ ] TreeNode / ListNode support
-- [ ] Gleam stdlib bundler (inline used functions for LeetCode submission)
+- [x] Gleam stdlib bundler (inline used functions for LeetCode submission)
 - [ ] `glc list` — list fetched problems
 - [ ] Remote test execution (`interpretSolution`)
 - [ ] Windows support (`USERPROFILE` for home directory)
@@ -263,6 +263,21 @@ invert_tree(Root) ->
 Gleam compiles to its own Erlang modules (`gleam_stdlib`, `gleam@list`, `gleam@dict`, etc.),
 **not** to Erlang standard library calls. Since LeetCode requires single-file submission,
 any `gleam_stdlib` usage requires bundling.
+
+#### Stdlib Bundler (implemented)
+
+The bundler runs automatically during `glc submit` after Erlang conversion:
+
+1. **Scan** — detect `gleam_stdlib:func(` and `gleam@module:func(` calls in the converted code
+2. **Resolve** — transitively resolve dependencies (stdlib functions that call other stdlib functions)
+3. **Extract** — pull function bodies from `build/dev/erlang/gleam_stdlib/_gleam_artefacts/`
+4. **Rename** — prefix all functions to avoid module boundaries (`gleam@list:map` → `gleam_list__map`)
+5. **Assemble** — concatenate bundled functions + renamed solution into a single submission
+
+Modules:
+- `src/gleeam_code/internal/stdlib_scanner.gleam` — dependency detection
+- `src/gleeam_code/internal/stdlib_extractor.gleam` — function body extraction from .erl files
+- `src/gleeam_code/internal/stdlib_bundler.gleam` — orchestration (resolve + rename + assemble)
 
 ## Type Mapping
 

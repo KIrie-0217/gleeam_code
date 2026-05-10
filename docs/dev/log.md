@@ -383,3 +383,56 @@ left-skewed, full binary tree (invert_tree example).
 
 - Session file occasionally empty after operations — needs investigation
 - Wrapper assumes single TreeNode/ListNode argument — multi-arg problems may need enhancement
+
+## 2026-05-10: Gleam stdlib bundler (Issue #2)
+
+### Overview
+
+Implemented automatic bundling of `gleam_stdlib` functions into LeetCode
+submissions. Users can now write idiomatic Gleam using `list.map`, `int.to_string`,
+etc., and submit successfully.
+
+### Architecture
+
+Three new modules in `src/gleeam_code/internal/`:
+
+1. **`stdlib_scanner.gleam`** — scans compiled Erlang for `gleam_stdlib:func(`
+   and `gleam@module:func(` patterns. Character-by-character parser that
+   identifies stdlib module names and function names.
+
+2. **`stdlib_extractor.gleam`** — extracts individual function bodies from
+   stdlib `.erl` files. Parses the Gleam compiler's output structure:
+   `-file(...)` delimiters → `?DOC(...)` blocks → `-spec` → function body.
+   Also provides `list_exported` to distinguish public/private functions.
+
+3. **`stdlib_bundler.gleam`** — orchestrates the full pipeline:
+   - Transitive dependency resolution (worklist algorithm)
+   - Local helper detection (non-exported functions called within extracted code)
+   - Function renaming (`gleam@list:map` → `gleam_list__map`) to eliminate
+     module-qualified calls
+   - Code assembly (bundled functions + renamed solution)
+
+### Integration
+
+Bundler runs automatically in `submit.gleam` after `erlang_convert.convert()`:
+- If no stdlib calls detected → no-op (zero overhead for pure solutions)
+- If stdlib calls found → full bundle pipeline
+
+Reads stdlib source from `build/dev/erlang/gleam_stdlib/_gleam_artefacts/`
+(already present after `gleam build`).
+
+### Design decisions
+
+- **Rename prefix**: `module__function` (double underscore) — unambiguous,
+  no collision with Erlang conventions
+- **Function-level extraction** over whole-module inclusion — minimizes
+  submission size for LeetCode's code limits
+- **`@` → `_` in module names**: Erlang atoms with `@` are valid but
+  underscore prefix is cleaner for function names
+
+### Testing
+
+- 77 tests, all passing (13 new tests for scanner, extractor, bundler)
+- Scanner: stdlib call detection, deduplication, non-stdlib filtering
+- Extractor: function extraction, multi-function, export listing, ?DOC skipping
+- Bundler: no-dep passthrough, call renaming
