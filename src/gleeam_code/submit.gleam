@@ -21,24 +21,42 @@ pub fn run(
   let question_id = extract_question_id(module_name)
 
   print("Building solution...")
-  use _ <- result.try(build_erlang())
+  use _ <- result.try(build_erlang(base_dir))
 
+  use project_name <- result.try(read_project_name(base_dir))
   let erl_path =
     base_dir
-    <> "/build/dev/erlang/gleeam_code/_gleam_artefacts/solutions@"
+    <> "/build/dev/erlang/"
+    <> project_name
+    <> "/_gleam_artefacts/solutions@"
     <> module_name
     <> "@solution.erl"
 
   use erl_source <- result.try(read_erl_file(erl_path))
 
   let converted = erlang_convert.convert(erl_source)
+
+  let solution_path =
+    base_dir <> "/src/solutions/" <> module_name <> "/solution.gleam"
+  use solution_source <- result.try(read_solution_file(solution_path))
+  let needs_tree = string.contains(solution_source, "TreeNode")
+  let needs_list = string.contains(solution_source, "ListNode")
+
+  let meta_path = base_dir <> "/src/solutions/" <> module_name <> "/.glc_meta"
+  use func_name <- result.try(read_entry_function(meta_path))
+
+  let final_code = case needs_tree || needs_list {
+    False -> converted
+    True -> bundle_with_types(converted, func_name, needs_tree, needs_list)
+  }
+
   print("Submitting to LeetCode as Erlang...")
 
   use csrf <- result.try(fetch_csrf(session))
   use submission_id <- result.try(submit_to_leetcode(
     slug,
     question_id,
-    converted,
+    final_code,
     session,
     csrf,
   ))
@@ -200,11 +218,46 @@ fn extract_csrf_from_headers(
   }
 }
 
-fn build_erlang() -> Result(Nil, String) {
-  let output = os_cmd("gleam build --target erlang 2>&1")
+fn build_erlang(base_dir: String) -> Result(Nil, String) {
+  let output =
+    os_cmd("cd " <> base_dir <> " && gleam build --target erlang 2>&1")
   case string.contains(output, "error:") {
     True -> Error("Build failed:\n" <> output)
     False -> Ok(Nil)
+  }
+}
+
+fn read_project_name(base_dir: String) -> Result(String, String) {
+  let toml_path = base_dir <> "/gleam.toml"
+  case file.read(toml_path) {
+    Error(_) -> Error("Could not read gleam.toml")
+    Ok(content) -> extract_name_from_toml(content)
+  }
+}
+
+fn extract_name_from_toml(content: String) -> Result(String, String) {
+  let lines = string.split(content, "\n")
+  find_name_line(lines)
+}
+
+fn find_name_line(lines: List(String)) -> Result(String, String) {
+  case lines {
+    [] -> Error("No 'name' field found in gleam.toml")
+    [line, ..rest] ->
+      case string.starts_with(string.trim(line), "name") {
+        True ->
+          case string.split_once(line, "=") {
+            Ok(#(_, value)) -> {
+              let name =
+                value
+                |> string.trim
+                |> string.replace("\"", "")
+              Ok(name)
+            }
+            Error(_) -> find_name_line(rest)
+          }
+        False -> find_name_line(rest)
+      }
   }
 }
 
@@ -394,6 +447,117 @@ fn do_all_digits(chars: List(String)) -> Bool {
         _ -> False
       }
   }
+}
+
+fn read_solution_file(path: String) -> Result(String, String) {
+  case file.read(path) {
+    Ok(content) -> Ok(content)
+    Error(_) -> Ok("")
+  }
+}
+
+fn read_entry_function(meta_path: String) -> Result(String, String) {
+  case file.read(meta_path) {
+    Error(_) ->
+      Error("No .glc_meta found. Re-run 'glc fetch' for this problem.")
+    Ok(content) -> {
+      let lines = string.split(content, "\n")
+      find_entry_line(lines)
+    }
+  }
+}
+
+fn find_entry_line(lines: List(String)) -> Result(String, String) {
+  case lines {
+    [] -> Error("No entry_function in .glc_meta")
+    [line, ..rest] ->
+      case string.split_once(line, "entry_function=") {
+        Ok(#(_, name)) ->
+          case string.trim(name) {
+            "" -> find_entry_line(rest)
+            n -> Ok(n)
+          }
+        Error(_) -> find_entry_line(rest)
+      }
+  }
+}
+
+fn bundle_with_types(
+  erl_code: String,
+  func_name: String,
+  needs_tree: Bool,
+  needs_list: Bool,
+) -> String {
+  let conversion_fns = generate_conversion_fns(needs_tree, needs_list)
+  let renamed =
+    string.replace(erl_code, func_name <> "(", func_name <> "_impl(")
+  let wrapper = generate_wrapper(func_name, needs_tree, needs_list)
+
+  conversion_fns <> "\n" <> wrapper <> "\n" <> renamed
+}
+
+fn generate_conversion_fns(needs_tree: Bool, needs_list: Bool) -> String {
+  let tree_fns = case needs_tree {
+    True ->
+      "tree_to_record(none) -> null;\n"
+      <> "tree_to_record({some, {tree_node, Val, Left, Right}}) ->\n"
+      <> "    #tree_node{val = Val, left = tree_to_record(Left), right = tree_to_record(Right)}.\n\n"
+      <> "tree_from_record(null) -> none;\n"
+      <> "tree_from_record(#tree_node{val = Val, left = Left, right = Right}) ->\n"
+      <> "    {some, {tree_node, Val, tree_from_record(Left), tree_from_record(Right)}}.\n\n"
+    False -> ""
+  }
+  let list_fns = case needs_list {
+    True ->
+      "list_to_record(none) -> null;\n"
+      <> "list_to_record({some, {list_node, Val, Next}}) ->\n"
+      <> "    #list_node{val = Val, next = list_to_record(Next)}.\n\n"
+      <> "list_from_record(null) -> none;\n"
+      <> "list_from_record(#list_node{val = Val, next = Next}) ->\n"
+      <> "    {some, {list_node, Val, list_from_record(Next)}}.\n\n"
+    False -> ""
+  }
+  tree_fns <> list_fns
+}
+
+fn generate_wrapper(
+  func_name: String,
+  needs_tree: Bool,
+  needs_list: Bool,
+) -> String {
+  let convert_arg = case needs_tree, needs_list {
+    True, _ -> "tree_from_record"
+    _, True -> "list_from_record"
+    _, _ -> ""
+  }
+  let convert_result = case needs_tree, needs_list {
+    True, _ -> "tree_to_record"
+    _, True -> "list_to_record"
+    _, _ -> ""
+  }
+  let spec_type = case needs_tree, needs_list {
+    True, _ -> "'null' | #tree_node{}"
+    _, True -> "'null' | #list_node{}"
+    _, _ -> "any()"
+  }
+  "-spec "
+  <> func_name
+  <> "("
+  <> spec_type
+  <> ") -> "
+  <> spec_type
+  <> ".\n"
+  <> func_name
+  <> "(Arg) ->\n"
+  <> "    GleamArg = "
+  <> convert_arg
+  <> "(Arg),\n"
+  <> "    GleamResult = "
+  <> func_name
+  <> "_impl(GleamArg),\n"
+  <> "    "
+  <> convert_result
+  <> "(GleamResult).\n"
 }
 
 @external(erlang, "gleeam_code_test_cmd_ffi", "list_directory")

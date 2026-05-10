@@ -28,8 +28,7 @@ two_sum(Nums, Target) ->
 "
 
   let expected =
-    "-spec two_sum(list(integer()), integer()) -> list(integer()).
-two_sum(Nums, Target) ->
+    "two_sum(Nums, Target) ->
     find_pair(Nums, Target, 0).
 "
 
@@ -80,11 +79,7 @@ two_sum(Nums, Target) ->
 "
 
   let result = erlang_convert.convert(input)
-  let assert True =
-    result
-    == "-spec find_index(list(integer()), integer(), integer()) -> {ok, integer()} |
-    {error, nil}.
-find_index(Nums, Val, Start) ->
+  let assert True = result == "find_index(Nums, Val, Start) ->
     case Nums of
         [] ->
             {error, nil};
@@ -99,7 +94,6 @@ find_index(Nums, Val, Start) ->
             end
     end.
 
--spec two_sum(list(integer()), integer()) -> list(integer()).
 two_sum(Nums, Target) ->
     find_pair(Nums, Target, 0).
 "

@@ -4,11 +4,43 @@ import gleam/string
 pub fn convert(erl_source: String) -> String {
   erl_source
   |> string.split("\n")
+  |> drop_spec_blocks([])
   |> list.filter(fn(line) { !is_directive_line(line) })
   |> drop_leading_empty
   |> string.join("\n")
   |> string.trim_end
   |> fn(s) { s <> "\n" }
+}
+
+fn drop_spec_blocks(lines: List(String), acc: List(String)) -> List(String) {
+  case lines {
+    [] -> list.reverse(acc)
+    [line, ..rest] ->
+      case string.starts_with(string.trim_start(line), "-spec ") {
+        True ->
+          case string.ends_with(string.trim(line), ".") {
+            True -> drop_spec_blocks(rest, acc)
+            False -> skip_spec_continuation(rest, acc)
+          }
+        False -> drop_spec_blocks(rest, [line, ..acc])
+      }
+  }
+}
+
+fn skip_spec_continuation(
+  lines: List(String),
+  acc: List(String),
+) -> List(String) {
+  case lines {
+    [] -> list.reverse(acc)
+    [line, ..rest] -> {
+      let trimmed = string.trim(line)
+      case string.ends_with(trimmed, ".") {
+        True -> drop_spec_blocks(rest, acc)
+        False -> skip_spec_continuation(rest, acc)
+      }
+    }
+  }
 }
 
 fn is_directive_line(line: String) -> Bool {

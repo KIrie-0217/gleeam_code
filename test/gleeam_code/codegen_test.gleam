@@ -1,3 +1,4 @@
+import gleam/string
 import gleeam_code/internal/codegen
 
 pub fn parse_erlang_spec_two_sum_test() {
@@ -79,4 +80,101 @@ pub fn generate_solution_test() {
   let assert True =
     result
     == "//// Problem 1: Two Sum\n//// https://leetcode.com/problems/two-sum/\n//// Difficulty: Easy\n\npub fn two_sum(nums: List(Int), target: Int) -> List(Int) {\n  todo\n}\n"
+}
+
+pub fn erlang_type_to_gleam_tree_node_test() {
+  let assert "Option(TreeNode)" = codegen.erlang_type_to_gleam("#tree_node{}")
+  let assert "Option(TreeNode)" =
+    codegen.erlang_type_to_gleam("'null' | #tree_node{}")
+}
+
+pub fn erlang_type_to_gleam_list_node_test() {
+  let assert "Option(ListNode)" = codegen.erlang_type_to_gleam("#list_node{}")
+  let assert "Option(ListNode)" =
+    codegen.erlang_type_to_gleam("'null' | #list_node{}")
+}
+
+pub fn parse_erlang_spec_tree_node_test() {
+  let snippet =
+    "-spec invert_tree(Root :: 'null' | #tree_node{}) -> 'null' | #tree_node{}.\ninvert_tree(Root) ->\n  ."
+  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert "invert_tree" = spec.name
+  let assert "Option(TreeNode)" = spec.return_type
+  let assert [p1] = spec.params
+  let assert "root" = p1.name
+  let assert "Option(TreeNode)" = p1.type_str
+}
+
+pub fn parse_erlang_spec_list_node_test() {
+  let snippet =
+    "-spec reverse_list(Head :: 'null' | #list_node{}) -> 'null' | #list_node{}.\nreverse_list(Head) ->\n  ."
+  let assert Ok(spec) = codegen.parse_erlang_spec(snippet)
+  let assert "reverse_list" = spec.name
+  let assert "Option(ListNode)" = spec.return_type
+  let assert [p1] = spec.params
+  let assert "head" = p1.name
+  let assert "Option(ListNode)" = p1.type_str
+}
+
+pub fn uses_tree_node_test() {
+  let spec =
+    codegen.FunctionSpec(
+      name: "invert_tree",
+      params: [codegen.Param(name: "root", type_str: "Option(TreeNode)")],
+      return_type: "Option(TreeNode)",
+    )
+  let assert True = codegen.uses_tree_node(spec)
+  let assert False = codegen.uses_list_node(spec)
+}
+
+pub fn uses_list_node_test() {
+  let spec =
+    codegen.FunctionSpec(
+      name: "reverse_list",
+      params: [codegen.Param(name: "head", type_str: "Option(ListNode)")],
+      return_type: "Option(ListNode)",
+    )
+  let assert False = codegen.uses_tree_node(spec)
+  let assert True = codegen.uses_list_node(spec)
+}
+
+pub fn generate_solution_tree_node_test() {
+  let spec =
+    codegen.FunctionSpec(
+      name: "invert_tree",
+      params: [codegen.Param(name: "root", type_str: "Option(TreeNode)")],
+      return_type: "Option(TreeNode)",
+    )
+  let result =
+    codegen.generate_solution(
+      "226",
+      "Invert Binary Tree",
+      "invert-binary-tree",
+      "Easy",
+      spec,
+    )
+  let assert True =
+    string.contains(result, "import gleam/option.{type Option, None, Some}")
+  let assert True =
+    string.contains(result, "import types.{type TreeNode, TreeNode}")
+  let assert True =
+    string.contains(result, "pub fn invert_tree(root: Option(TreeNode))")
+}
+
+pub fn format_gleam_value_typed_tree_test() {
+  let assert "tree_from_level_order([Some(4), Some(2), Some(7)])" =
+    codegen.format_gleam_value_typed("[4,2,7]", "Option(TreeNode)")
+  let assert "None" =
+    codegen.format_gleam_value_typed("null", "Option(TreeNode)")
+  let assert "None" = codegen.format_gleam_value_typed("[]", "Option(TreeNode)")
+  let assert "tree_from_level_order([Some(1), None, Some(2)])" =
+    codegen.format_gleam_value_typed("[1,null,2]", "Option(TreeNode)")
+}
+
+pub fn format_gleam_value_typed_list_node_test() {
+  let assert "list_from_list([1, 2, 3])" =
+    codegen.format_gleam_value_typed("[1,2,3]", "Option(ListNode)")
+  let assert "None" =
+    codegen.format_gleam_value_typed("null", "Option(ListNode)")
+  let assert "None" = codegen.format_gleam_value_typed("[]", "Option(ListNode)")
 }

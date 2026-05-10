@@ -28,6 +28,8 @@ pub fn generate_solution(
     <> difficulty
     <> "\n"
 
+  let imports = generate_imports(spec)
+
   let params_str =
     spec.params
     |> list.map(fn(p) { p.name <> ": " <> p.type_str })
@@ -42,7 +44,26 @@ pub fn generate_solution(
     <> spec.return_type
     <> " {\n  todo\n}\n"
 
-  header <> func
+  header <> imports <> func
+}
+
+fn generate_imports(spec: FunctionSpec) -> String {
+  let needs_tree = uses_tree_node(spec)
+  let needs_list = uses_list_node(spec)
+  case needs_tree || needs_list {
+    False -> ""
+    True -> {
+      let option_import = "\nimport gleam/option.{type Option, None, Some}\n"
+      let type_imports = case needs_tree, needs_list {
+        True, True ->
+          "import types.{type TreeNode, TreeNode, type ListNode, ListNode}\n"
+        True, False -> "import types.{type TreeNode, TreeNode}\n"
+        False, True -> "import types.{type ListNode, ListNode}\n"
+        False, False -> ""
+      }
+      option_import <> type_imports
+    }
+  }
 }
 
 pub fn generate_test(
@@ -52,29 +73,58 @@ pub fn generate_test(
   outputs: List(String),
 ) -> String {
   let import_line = "import " <> module_path <> "/solution\n"
+  let needs_tree = uses_tree_node(spec)
+  let needs_list = uses_list_node(spec)
+  let extra_imports = case needs_tree || needs_list {
+    False -> ""
+    True -> {
+      let option_import = "import gleam/option.{None, Some}\n"
+      let types_import = case needs_tree, needs_list {
+        True, True -> "import types.{tree_from_level_order, list_from_list}\n"
+        True, False -> "import types.{tree_from_level_order}\n"
+        False, True -> "import types.{list_from_list}\n"
+        False, False -> ""
+      }
+      option_import <> types_import
+    }
+  }
 
   let padded_outputs = pad_outputs(outputs, list.length(inputs))
   let pairs = list.zip(inputs, padded_outputs)
 
+  let uses_nodes = needs_tree || needs_list
   let tests =
     list.index_map(pairs, fn(pair, idx) {
       let example_num = int.to_string(idx + 1)
       let args = parse_testcase_input(pair.0, spec.params)
-      let expected = format_gleam_value(pair.1)
+      let expected = format_gleam_value_typed(pair.1, spec.return_type)
 
-      "\npub fn example_"
-      <> example_num
-      <> "_test() {\n  let assert "
-      <> expected
-      <> " = solution."
-      <> spec.name
-      <> "("
-      <> args
-      <> ")\n}\n"
+      case uses_nodes {
+        True ->
+          "\npub fn example_"
+          <> example_num
+          <> "_test() {\n  let expected = "
+          <> expected
+          <> "\n  let result = solution."
+          <> spec.name
+          <> "("
+          <> args
+          <> ")\n  let assert True = expected == result\n}\n"
+        False ->
+          "\npub fn example_"
+          <> example_num
+          <> "_test() {\n  let assert "
+          <> expected
+          <> " = solution."
+          <> spec.name
+          <> "("
+          <> args
+          <> ")\n}\n"
+      }
     })
     |> string.join("")
 
-  import_line <> tests
+  import_line <> extra_imports <> tests
 }
 
 fn pad_outputs(outputs: List(String), target_len: Int) -> List(String) {
@@ -190,6 +240,16 @@ pub fn erlang_type_to_gleam(erl_type: String) -> String {
     "unicode:chardata()" -> "String"
     "unicode:unicode_binary()" -> "String"
     "char()" -> "Int"
+    "#tree_node{}"
+    | "'null' | #tree_node{}"
+    | "#tree_node{} | 'null'"
+    | "null | #tree_node{}"
+    | "#tree_node{} | null" -> "Option(TreeNode)"
+    "#list_node{}"
+    | "'null' | #list_node{}"
+    | "#list_node{} | 'null'"
+    | "null | #list_node{}"
+    | "#list_node{} | null" -> "Option(ListNode)"
     _ ->
       case string.starts_with(trimmed, "[") && string.ends_with(trimmed, "]") {
         True -> {
@@ -202,6 +262,18 @@ pub fn erlang_type_to_gleam(erl_type: String) -> String {
         False -> trimmed
       }
   }
+}
+
+pub fn uses_tree_node(spec: FunctionSpec) -> Bool {
+  let in_params =
+    list.any(spec.params, fn(p) { string.contains(p.type_str, "TreeNode") })
+  in_params || string.contains(spec.return_type, "TreeNode")
+}
+
+pub fn uses_list_node(spec: FunctionSpec) -> Bool {
+  let in_params =
+    list.any(spec.params, fn(p) { string.contains(p.type_str, "ListNode") })
+  in_params || string.contains(spec.return_type, "ListNode")
 }
 
 pub fn to_snake_case(name: String) -> String {
@@ -245,22 +317,70 @@ pub fn format_module_name(frontend_id: String, title_slug: String) -> String {
 fn parse_testcase_input(input: String, params: List(Param)) -> String {
   let lines = string.split(input, "\n")
   list.zip(lines, params)
-  |> list.map(fn(pair) { format_gleam_value(pair.0) })
+  |> list.map(fn(pair) { format_gleam_value_typed(pair.0, pair.1.type_str) })
   |> string.join(", ")
 }
 
 pub fn format_gleam_value(raw: String) -> String {
+  format_gleam_value_typed(raw, "")
+}
+
+pub fn format_gleam_value_typed(raw: String, type_str: String) -> String {
   let trimmed = string.trim(raw)
-  case trimmed {
-    // String value with quotes
-    "\"" <> _ -> trimmed
-    // Array
-    "[" <> _ -> format_gleam_list(trimmed)
-    // Boolean
-    "true" -> "True"
-    "false" -> "False"
-    // Number or other
-    _ -> trimmed
+  case type_str {
+    "Option(TreeNode)" -> format_tree_value(trimmed)
+    "Option(ListNode)" -> format_list_node_value(trimmed)
+    _ ->
+      case trimmed {
+        "\"" <> _ -> trimmed
+        "[" <> _ -> format_gleam_list(trimmed)
+        "true" -> "True"
+        "false" -> "False"
+        "null" -> "None"
+        _ -> trimmed
+      }
+  }
+}
+
+fn format_tree_value(raw: String) -> String {
+  case raw {
+    "null" | "[]" -> "None"
+    "[" <> _ -> {
+      let inner =
+        raw
+        |> string.drop_start(1)
+        |> string.drop_end(1)
+      let items =
+        split_list_items(inner)
+        |> list.map(fn(item) {
+          let v = string.trim(item)
+          case v {
+            "null" -> "None"
+            _ -> "Some(" <> v <> ")"
+          }
+        })
+        |> string.join(", ")
+      "tree_from_level_order([" <> items <> "])"
+    }
+    _ -> raw
+  }
+}
+
+fn format_list_node_value(raw: String) -> String {
+  case raw {
+    "null" | "[]" -> "None"
+    "[" <> _ -> {
+      let inner =
+        raw
+        |> string.drop_start(1)
+        |> string.drop_end(1)
+      let items =
+        split_list_items(inner)
+        |> list.map(fn(item) { string.trim(item) })
+        |> string.join(", ")
+      "list_from_list([" <> items <> "])"
+    }
+    _ -> raw
   }
 }
 

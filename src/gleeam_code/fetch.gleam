@@ -58,6 +58,11 @@ pub fn run(
   ))
   print("  Created test/" <> module_path <> "/solution_test.gleam")
 
+  use _ <- result.try(write_file(
+    src_dir <> "/.glc_meta",
+    "entry_function=" <> spec.name <> "\n",
+  ))
+
   Ok(Nil)
 }
 
