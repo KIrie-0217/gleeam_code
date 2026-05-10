@@ -60,11 +60,11 @@ gleam run -- fetch two-sum
 
 ## Limitations
 
-> [!CAUTION]
-> **TreeNode / ListNode problems are not supported yet.** Problems that use
-> linked lists or binary trees (e.g. "Add Two Numbers", "Invert Binary Tree")
-> cannot be solved with glc at this time. Stick to array, string, and numeric
-> problems.
+> [!NOTE]
+> **TreeNode / ListNode problems are supported.** `glc init` generates
+> `src/types.gleam` with `TreeNode` and `ListNode` types. Solutions use
+> `Option(TreeNode)` / `Option(ListNode)` and are automatically converted
+> to Erlang records at submit time.
 
 > [!CAUTION]
 > **Gleam standard library is not available in submissions.** LeetCode requires
