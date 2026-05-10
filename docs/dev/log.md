@@ -436,3 +436,61 @@ Reads stdlib source from `build/dev/erlang/gleam_stdlib/_gleam_artefacts/`
 - Scanner: stdlib call detection, deduplication, non-stdlib filtering
 - Extractor: function extraction, multi-function, export listing, ?DOC skipping
 - Bundler: no-dep passthrough, call renaming
+
+## 2026-05-10: `glc list` command (Issue #3)
+
+### Overview
+
+Implemented `glc list` to display all fetched problems with submission status
+and filtering capabilities.
+
+### Features
+
+1. **Problem listing**: scans `src/solutions/` directories, reads `solution.gleam`
+   headers for number/slug/difficulty, sorts by problem number
+2. **Status display**: reads `status` field from `.glc_meta` (written by `glc submit`).
+   Shows `✓ Accepted`, `✗ <reason>`, or blank for unsolved problems.
+3. **Difficulty filter**: `--easy`, `--medium`, `--hard` (combinable, OR logic)
+4. **Status filter**: `--solved` (Accepted only), `--unsolved` (not Accepted)
+5. **Combined filters**: `--easy --unsolved` applies both constraints (AND logic
+   between difficulty and status groups)
+
+### Submit integration
+
+`glc submit` now saves result metadata to `.glc_meta` after receiving the
+submission result:
+- `status=Accepted` / `Wrong Answer` / `Time Limit Exceeded` / etc.
+- `runtime=0 ms`
+- `memory=7.2 MB`
+
+Values are overwritten on re-submit (old status/runtime/memory lines removed first).
+
+### Implementation
+
+- `src/gleeam_code/list_cmd.gleam` — command logic, filter parsing, display formatting
+- `src/gleeam_code/internal/file.gleam` — added `list_directory` function
+- `src/gleeam_code_file_ffi.erl` — added `list_dir/1` wrapper (charlist→binary conversion)
+- `src/gleeam_code/submit.gleam` — added `save_status` after poll result
+
+### Design decisions
+
+- **Parse from solution header** rather than `.glc_meta` for number/slug/difficulty:
+  the header is always present (created by fetch), while meta may be incomplete.
+  This keeps `list` working even before any submit.
+- **Filter parsing is permissive**: unknown flags are silently ignored (future-proof
+  for adding `--sort` etc. without breaking existing usage).
+- **`Option` type for solved/unsolved**: both Off = no filter, both On = show all
+  (conflicting flags cancel out rather than error).
+
+### FFI note
+
+`file:list_dir/1` returns charlists, not binaries. Required an FFI wrapper
+(`list_dir/1` in `gleeam_code_file_ffi.erl`) to convert entries via
+`unicode:characters_to_binary/1`.
+
+### Final state
+
+- 89 tests, all passing
+- New modules: `list_cmd`
+- New FFI function: `gleeam_code_file_ffi:list_dir/1`
+- New test helpers: `gleeam_code_list_test_ffi.erl`

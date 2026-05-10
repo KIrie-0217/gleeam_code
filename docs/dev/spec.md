@@ -22,7 +22,7 @@
 
 - [ ] TreeNode / ListNode support
 - [x] Gleam stdlib bundler (inline used functions for LeetCode submission)
-- [ ] `glc list` — list fetched problems
+- [x] `glc list` — list fetched problems with status display and filters
 - [ ] Remote test execution (`interpretSolution`)
 - [ ] Windows support (`USERPROFILE` for home directory)
 - [ ] Shell completion (`glc completion bash/zsh/fish`)
@@ -115,6 +115,38 @@ Prompt the user to paste their `LEETCODE_SESSION` cookie and save it to `~/.glee
 - Prompt to paste cookie → trim → save to `~/.gleeam/session`
 - Empty input → error, session not saved
 
+### `glc list [options]`
+
+List all fetched problems with their status.
+
+- Scans `src/solutions/` for problem directories
+- Reads solution header for number, slug, difficulty
+- Reads `.glc_meta` for submission status (updated by `glc submit`)
+- Display as a formatted table with columns: #, Slug, Difficulty, Status
+
+#### Filter options
+
+| Flag | Effect |
+|---|---|
+| `--easy` | Show only Easy problems |
+| `--medium` | Show only Medium problems |
+| `--hard` | Show only Hard problems |
+| `--solved` | Show only Accepted problems |
+| `--unsolved` | Show problems not yet Accepted |
+
+Filters are combinable: `glc list --easy --unsolved` shows Easy problems that
+haven't been solved yet. Multiple difficulty flags are OR'd (`--easy --medium`
+shows both).
+
+#### Example output
+
+```
+#    Slug                          Difficulty  Status
+1    two-sum                       Easy        ✓ Accepted
+14   longest-common-prefix         Easy
+53   maximum-subarray              Medium      ✗ Wrong Answer
+```
+
 ### `glc fetch <slug-or-number>`
 
 Fetch a problem from LeetCode and generate solution files.
@@ -154,6 +186,8 @@ Build Gleam source, convert to Erlang, and submit to LeetCode.
 - Post-process the generated `.erl` file (see Erlang Conversion)
 - Submit as Erlang (`langSlug: "erlang"`) via LeetCode GraphQL API
 - Display submission result (accepted, wrong answer, runtime, etc.)
+- Save result to `.glc_meta`: `status`, `runtime`, `memory` fields
+  (overwrites previous values on re-submit)
 
 ## Authentication
 
@@ -471,5 +505,5 @@ Target: array, string, and numeric problems (no TreeNode/ListNode).
 
 - TreeNode / ListNode support with Gleam type definitions and Erlang record conversion
 - Gleam stdlib bundler: detect and inline used `gleam_stdlib` functions
-- `glc list` — list fetched problems
+- `glc list` — list fetched problems with status display and difficulty/status filters
 - Remote test execution via `interpretSolution`
