@@ -35,6 +35,11 @@ pub fn dir_exists(path: String) -> Bool {
   is_dir(path)
 }
 
+/// List entries in a directory.
+pub fn list_directory(path: String) -> Result(List(String), FileError) {
+  list_dir(path)
+}
+
 /// Delete a file.
 pub fn delete(path: String) -> Result(Nil, FileError) {
   delete_file(path)
@@ -79,3 +84,6 @@ fn is_regular(path: String) -> Bool
 
 @external(erlang, "filelib", "is_dir")
 fn is_dir(path: String) -> Bool
+
+@external(erlang, "gleeam_code_file_ffi", "list_dir")
+fn list_dir(path: String) -> Result(List(String), FileError)

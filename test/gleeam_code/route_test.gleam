@@ -1,4 +1,4 @@
-import gleeam_code.{Auth, Fetch, GlobalOpts, Init, Submit, Test}
+import gleeam_code.{Auth, Fetch, GlobalOpts, Init, List, Submit, Test}
 
 pub fn parse_global_with_directory_test() {
   let assert #(GlobalOpts(directory: "/tmp/proj"), ["init"]) =
@@ -20,6 +20,15 @@ pub fn route_init_test() {
 
 pub fn route_auth_test() {
   let assert Ok(Auth) = gleeam_code.route(["auth"])
+}
+
+pub fn route_list_test() {
+  let assert Ok(List([])) = gleeam_code.route(["list"])
+}
+
+pub fn route_list_with_flags_test() {
+  let assert Ok(List(["--easy", "--solved"])) =
+    gleeam_code.route(["list", "--easy", "--solved"])
 }
 
 pub fn route_fetch_test() {

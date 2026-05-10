@@ -3,6 +3,7 @@ import gleam/io
 import gleeam_code/auth
 import gleeam_code/fetch
 import gleeam_code/init
+import gleeam_code/list_cmd
 import gleeam_code/submit
 import gleeam_code/test_cmd
 
@@ -14,6 +15,7 @@ pub type Command {
   Version
   Init
   Auth
+  List(args: List(String))
   Fetch(target: String)
   Test(target: String)
   Submit(target: String)
@@ -31,6 +33,7 @@ pub fn route(args: List(String)) -> Result(Command, String) {
     ["--version"] | ["-v"] -> Ok(Version)
     ["init"] -> Ok(Init)
     ["auth"] -> Ok(Auth)
+    ["list", ..rest] -> Ok(List(rest))
     ["fetch", target] -> Ok(Fetch(target))
     ["test", target] -> Ok(Test(target))
     ["submit", target] -> Ok(Submit(target))
@@ -51,6 +54,11 @@ pub fn main() -> Nil {
       }
     Ok(Auth) ->
       case auth.run(opts.directory, io.println, auth.stdin_read_line) {
+        Ok(_) -> Nil
+        Error(msg) -> io.println("Error: " <> msg)
+      }
+    Ok(List(args)) ->
+      case list_cmd.run(opts.directory, args, io.println) {
         Ok(_) -> Nil
         Error(msg) -> io.println("Error: " <> msg)
       }
@@ -82,7 +90,12 @@ pub fn usage() -> String {
 Usage:
   glc init                    Initialize project
   glc auth                    Save LeetCode session cookie
+  glc list [options]          List fetched problems
   glc fetch <slug-or-number>  Fetch problem and generate files
   glc test <slug-or-number>   Run tests for a problem
-  glc submit <slug-or-number> Submit solution to LeetCode"
+  glc submit <slug-or-number> Submit solution to LeetCode
+
+List options:
+  --easy, --medium, --hard    Filter by difficulty
+  --solved, --unsolved        Filter by submission status"
 }

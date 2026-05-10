@@ -67,10 +67,43 @@ pub fn run(
   ))
   print("Submitted! Checking result...")
 
-  use result <- result.try(poll_result(submission_id, session, csrf, 0))
-  print(format_result(result))
+  use submit_result <- result.try(poll_result(submission_id, session, csrf, 0))
+  print(format_result(submit_result))
+
+  save_status(meta_path, submit_result)
 
   Ok(Nil)
+}
+
+fn save_status(meta_path: String, submit_result: SubmitResult) -> Nil {
+  case file.read(meta_path) {
+    Ok(content) -> {
+      let updated =
+        content
+        |> remove_meta_key("status")
+        |> remove_meta_key("runtime")
+        |> remove_meta_key("memory")
+      let new_content =
+        string.trim_end(updated)
+        <> "\nstatus="
+        <> submit_result.status
+        <> "\nruntime="
+        <> submit_result.runtime
+        <> "\nmemory="
+        <> submit_result.memory
+        <> "\n"
+      let _ = file.write(meta_path, new_content)
+      Nil
+    }
+    Error(_) -> Nil
+  }
+}
+
+fn remove_meta_key(content: String, key: String) -> String {
+  content
+  |> string.split("\n")
+  |> list.filter(fn(line) { !string.starts_with(line, key <> "=") })
+  |> string.join("\n")
 }
 
 fn require_session() -> Result(String, String) {

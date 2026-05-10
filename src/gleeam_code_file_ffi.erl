@@ -1,5 +1,5 @@
 -module(gleeam_code_file_ffi).
--export([write_file/2, ensure_dir/1, make_dir/1, delete_file/1, delete_dir/1]).
+-export([write_file/2, ensure_dir/1, make_dir/1, delete_file/1, delete_dir/1, list_dir/1]).
 
 %% Erlang file functions return ok | {error, Reason}.
 %% Gleam Result expects {ok, Value} | {error, Reason}.
@@ -32,5 +32,12 @@ delete_file(Path) ->
 delete_dir(Path) ->
     case file:del_dir(Path) of
         ok -> {ok, nil};
+        {error, Reason} -> {error, Reason}
+    end.
+
+list_dir(Path) ->
+    case file:list_dir(Path) of
+        {ok, Entries} ->
+            {ok, [unicode:characters_to_binary(E) || E <- Entries]};
         {error, Reason} -> {error, Reason}
     end.
