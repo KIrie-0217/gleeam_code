@@ -9,6 +9,7 @@ import gleam/string
 import gleeam_code/internal/config
 import gleeam_code/internal/erlang_convert
 import gleeam_code/internal/file
+import gleeam_code/internal/stdlib_bundler
 
 pub fn run(
   base_dir: String,
@@ -37,6 +38,9 @@ pub fn run(
 
   let converted = erlang_convert.convert(erl_source)
 
+  let stdlib_dir = base_dir <> "/build/dev/erlang/gleam_stdlib/_gleam_artefacts"
+  let bundled = stdlib_bundler.bundle(converted, stdlib_dir)
+
   let solution_path =
     base_dir <> "/src/solutions/" <> module_name <> "/solution.gleam"
   use solution_source <- result.try(read_solution_file(solution_path))
@@ -47,8 +51,8 @@ pub fn run(
   use meta <- result.try(read_meta(meta_path))
 
   let final_code = case needs_tree || needs_list {
-    False -> converted
-    True -> bundle_with_types(converted, meta, needs_tree, needs_list)
+    False -> bundled
+    True -> bundle_with_types(bundled, meta, needs_tree, needs_list)
   }
 
   print("Submitting to LeetCode as Erlang...")
