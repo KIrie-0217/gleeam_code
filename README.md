@@ -3,6 +3,10 @@
 A Gleam CLI tool for solving LeetCode problems.
 Write solutions in Gleam, compile to Erlang, and submit to LeetCode.
 
+- Gleam standard library auto-bundled into submissions
+- TreeNode / ListNode problems supported with automatic record conversion
+- Problem tracking with difficulty and status filters
+
 ## Installation
 
 ### Nix (recommended)
@@ -32,72 +36,60 @@ mv gleeam_code ~/.local/bin/glc
 
 Download the `glc` escript from [Releases](https://github.com/KIrie-0217/gleeam_code/releases). Requires Erlang/OTP on the host.
 
-## Usage
+## Quick Start
 
 ```sh
-glc init                    # Initialize project
-glc auth                    # Save LeetCode session cookie
-glc fetch two-sum           # Fetch problem (by slug or number)
-glc fetch 14
-glc test two-sum            # Run tests for a problem
-glc submit two-sum          # Submit solution to LeetCode
-glc --version               # Show version
+glc init                    # Initialize project (run once)
+glc auth                    # Save your LeetCode session cookie
+glc fetch two-sum           # Fetch problem and generate files
+# ... implement src/solutions/p0001_two_sum/solution.gleam ...
+glc test two-sum            # Run local tests
+glc submit two-sum          # Submit to LeetCode
+```
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `glc init` | Initialize project directories and type definitions |
+| `glc auth` | Prompt and save LeetCode session cookie to `~/.gleeam/session` |
+| `glc fetch <slug-or-number>` | Fetch problem from LeetCode, generate solution stub and tests |
+| `glc test <slug-or-number>` | Run EUnit on the problem's test module |
+| `glc submit <slug-or-number>` | Build, bundle stdlib, convert to Erlang, submit |
+| `glc list [options]` | List fetched problems with status |
+| `glc --version` | Show version |
+
+### `glc list` filters
+
+```sh
+glc list --easy --unsolved  # Easy problems not yet Accepted
+glc list --medium --hard    # Medium and Hard problems
+glc list --solved           # All Accepted problems
 ```
 
 ### Global options
 
 ```sh
-glc -C /path/to/project fetch two-sum
+glc -C /path/to/project fetch two-sum   # Run in a different directory
 ```
 
-### Development mode
+### Authentication
 
-If running from source without building the escript:
+Session cookie is resolved in this order:
 
-```sh
-gleam run -- fetch two-sum
-```
-
-## Limitations
-
-> [!NOTE]
-> **TreeNode / ListNode problems are supported.** `glc init` generates
-> `src/types.gleam` with `TreeNode` and `ListNode` types. Solutions use
-> `Option(TreeNode)` / `Option(ListNode)` and are automatically converted
-> to Erlang records at submit time.
-
-> [!CAUTION]
-> **Gleam standard library is not available in submissions.** LeetCode requires
-> single-file submission, and `gleam_stdlib` functions (`list.map`, `dict.get`,
-> etc.) compile to separate Erlang modules that are not present on the judge.
-> Write solutions using pattern matching, recursion, and basic operators, or use
-> `@external` to call Erlang stdlib functions directly.
-
-## How it works
-
-1. `glc fetch` retrieves the problem from LeetCode's GraphQL API and generates:
-   - `src/solutions/p0001_two_sum/solution.gleam` — function stub with problem URL
-   - `test/solutions/p0001_two_sum/solution_test.gleam` — example test cases
-2. You implement the solution in Gleam
-3. `glc test` runs EUnit on that specific problem's test module
-4. `glc submit` compiles to Erlang, strips compiler directives, and submits to LeetCode
-
-## Authentication
-
-LeetCode session cookie is resolved in this order:
-
-1. Session file `~/.gleeam/session` (saved by `glc auth`)
-2. Environment variable `LEETCODE_SESSION` (fallback)
+1. `~/.gleeam/session` (saved by `glc auth`)
+2. `LEETCODE_SESSION` environment variable (fallback)
 
 Free problems can be fetched without authentication.
 
 ## Development
 
 ```sh
-gleam test              # Run all unit tests
-gleam build             # Build the project
-gleam run -m gleescript # Build standalone escript
-nix build              # Build via Nix
+gleam run -- fetch two-sum  # Run from source without escript
+gleam test                  # Run all unit tests
+gleam build                 # Build the project
+gleam run -m gleescript     # Build standalone escript
+nix build                   # Build via Nix
 ```
 
 ### Contributing
