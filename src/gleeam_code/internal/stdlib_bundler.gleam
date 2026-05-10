@@ -1,5 +1,6 @@
 import gleam/list
 import gleam/string
+import gleeam_code/internal/char
 import gleeam_code/internal/file
 import gleeam_code/internal/stdlib_extractor
 import gleeam_code/internal/stdlib_scanner.{type StdlibCall, StdlibCall}
@@ -87,7 +88,7 @@ fn scan_for_local_calls(
   case chars {
     [] -> acc
     [c, ..rest] ->
-      case is_lower_or_underscore(c) || is_ident_continue(c, current) {
+      case is_local_call_start(c, current) {
         True -> scan_for_local_calls(rest, [c, ..current], acc)
         False ->
           case c {
@@ -110,100 +111,10 @@ fn scan_for_local_calls(
   }
 }
 
-fn is_lower_or_underscore(c: String) -> Bool {
-  case c {
-    "a"
-    | "b"
-    | "c"
-    | "d"
-    | "e"
-    | "f"
-    | "g"
-    | "h"
-    | "i"
-    | "j"
-    | "k"
-    | "l"
-    | "m"
-    | "n"
-    | "o"
-    | "p"
-    | "q"
-    | "r"
-    | "s"
-    | "t"
-    | "u"
-    | "v"
-    | "w"
-    | "x"
-    | "y"
-    | "z"
-    | "_" -> True
-    _ -> False
-  }
-}
-
-fn is_ident_continue(c: String, current: List(String)) -> Bool {
+fn is_local_call_start(c: String, current: List(String)) -> Bool {
   case current {
-    [] -> False
-    _ ->
-      case c {
-        "a"
-        | "b"
-        | "c"
-        | "d"
-        | "e"
-        | "f"
-        | "g"
-        | "h"
-        | "i"
-        | "j"
-        | "k"
-        | "l"
-        | "m"
-        | "n"
-        | "o"
-        | "p"
-        | "q"
-        | "r"
-        | "s"
-        | "t"
-        | "u"
-        | "v"
-        | "w"
-        | "x"
-        | "y"
-        | "z" -> True
-        "A"
-        | "B"
-        | "C"
-        | "D"
-        | "E"
-        | "F"
-        | "G"
-        | "H"
-        | "I"
-        | "J"
-        | "K"
-        | "L"
-        | "M"
-        | "N"
-        | "O"
-        | "P"
-        | "Q"
-        | "R"
-        | "S"
-        | "T"
-        | "U"
-        | "V"
-        | "W"
-        | "X"
-        | "Y"
-        | "Z" -> True
-        "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" -> True
-        "_" | "@" -> True
-        _ -> False
-      }
+    [] -> char.is_lowercase(c) || c == "_"
+    _ -> char.is_identifier(c)
   }
 }
 
@@ -273,7 +184,7 @@ fn do_rename_bare(
     [only] -> only
     [first, ..rest] -> {
       let should_rename = case string.last(first) {
-        Ok(c) -> !is_ident_char(c)
+        Ok(c) -> !char.is_identifier_no_at(c)
         Error(_) -> True
       }
       case should_rename {
@@ -286,66 +197,6 @@ fn do_rename_bare(
           <> do_rename_bare(rest, func_name, replacement)
       }
     }
-  }
-}
-
-fn is_ident_char(c: String) -> Bool {
-  case c {
-    "a"
-    | "b"
-    | "c"
-    | "d"
-    | "e"
-    | "f"
-    | "g"
-    | "h"
-    | "i"
-    | "j"
-    | "k"
-    | "l"
-    | "m"
-    | "n"
-    | "o"
-    | "p"
-    | "q"
-    | "r"
-    | "s"
-    | "t"
-    | "u"
-    | "v"
-    | "w"
-    | "x"
-    | "y"
-    | "z" -> True
-    "A"
-    | "B"
-    | "C"
-    | "D"
-    | "E"
-    | "F"
-    | "G"
-    | "H"
-    | "I"
-    | "J"
-    | "K"
-    | "L"
-    | "M"
-    | "N"
-    | "O"
-    | "P"
-    | "Q"
-    | "R"
-    | "S"
-    | "T"
-    | "U"
-    | "V"
-    | "W"
-    | "X"
-    | "Y"
-    | "Z" -> True
-    "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" -> True
-    "_" -> True
-    _ -> False
   }
 }
 

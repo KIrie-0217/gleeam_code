@@ -494,3 +494,74 @@ Values are overwritten on re-submit (old status/runtime/memory lines removed fir
 - New modules: `list_cmd`
 - New FFI function: `gleeam_code_file_ffi:list_dir/1`
 - New test helpers: `gleeam_code_list_test_ffi.erl`
+
+## 2026-05-10: Refactor — Extract shared internal modules
+
+### Motivation
+
+Multiple modules had duplicated logic that diverged slightly over time,
+creating maintenance risk. Key duplications:
+- `is_numeric` implemented 3 times (leetcode, submit, test_cmd)
+- `resolve_module` (target → directory name) duplicated in submit and test_cmd
+- `.glc_meta` key-value parsing duplicated in submit and list_cmd
+- Character classification (`is_identifier_char` etc.) copied across
+  stdlib_scanner, stdlib_bundler, stdlib_extractor
+
+### New modules
+
+1. **`internal/char.gleam`** — single source of truth for character predicates:
+   `is_lowercase`, `is_uppercase`, `is_alpha`, `is_digit`, `is_identifier`,
+   `is_identifier_no_at`. Replaces 5 independent re-implementations across
+   stdlib_scanner, stdlib_bundler, and stdlib_extractor.
+
+2. **`internal/resolver.gleam`** — target resolution logic shared by test_cmd
+   and submit: `resolve_module(base_dir, target)` and `is_numeric(s)`.
+   Replaces duplicated directory scan + number/slug matching + `is_numeric`
+   in three modules (leetcode, submit, test_cmd).
+
+3. **`internal/meta.gleam`** — `.glc_meta` file operations: `read(path)` →
+   `SubmitMeta`, `find_value(lines, key)`, `save_status(path, ...)`.
+   Previously `SubmitMeta` and `read_meta`/`find_meta_value`/`save_status`
+   lived in submit.gleam, with a separate `find_meta_value` copy in list_cmd.
+
+4. **`internal/spec_parser.gleam`** — Erlang spec parsing extracted from
+   codegen.gleam: `parse_erlang_spec`, `erlang_type_to_gleam`, `FunctionSpec`,
+   `Param`, `uses_tree_node`, `uses_list_node`, `to_snake_case`,
+   `format_module_name`, `split_params`. codegen.gleam now focuses solely on
+   Gleam source/test generation, importing types from spec_parser.
+
+### Modules refactored
+
+- **`test_cmd.gleam`**: 94 lines → 22 lines. Uses `resolver.resolve_module`.
+  Deleted local `resolve_module`, `find_matching_entry`, `is_numeric_target`,
+  `list_directory` FFI call.
+- **`submit.gleam`**: uses `resolver.resolve_module` + `meta.read`/`meta.save_status`.
+  Deleted `is_numeric`, `do_all_digits`, `resolve_module`, `find_matching_entry`,
+  `find_by_number`, `find_by_slug`, `do_find`, `read_meta`, `find_meta_value`,
+  `save_status`, `remove_meta_key`, `list_directory` FFI reference.
+- **`list_cmd.gleam`**: uses `meta.find_value`. Deleted local `find_meta_value`.
+- **`leetcode.gleam`**: uses `resolver.is_numeric`. Deleted `is_numeric` + `is_digit`.
+- **`stdlib_scanner.gleam`**: uses `char.is_identifier`. Deleted 30-line `is_identifier_char`.
+- **`stdlib_bundler.gleam`**: uses `char.is_lowercase`, `char.is_identifier`,
+  `char.is_identifier_no_at`. Deleted `is_lower_or_underscore` (26 lines),
+  `is_ident_continue` (55 lines), `is_ident_char` (57 lines).
+- **`stdlib_extractor.gleam`**: uses `char.is_lowercase`. Deleted `is_lowercase_alpha` (26 lines).
+- **`codegen.gleam`**: now imports `spec_parser.{type FunctionSpec, type Param}`
+  and delegates `split_list_items` to `spec_parser.split_params`.
+- **`fetch.gleam`**: uses `spec_parser.parse_erlang_spec` and `spec_parser.format_module_name`.
+
+### Deleted files
+
+- `src/gleeam_code_test_cmd_ffi.erl` — no longer needed; `resolver` uses
+  `file.list_directory` which goes through `gleeam_code_file_ffi:list_dir/1`.
+
+### Test changes
+
+- `codegen_test.gleam` updated to import `spec_parser` for type/parser assertions.
+- All 89 tests pass unchanged.
+
+### Net effect
+
+- ~200 lines of duplicated code eliminated
+- Single point of change for module resolution, meta parsing, and char classification
+- No behavior changes (pure refactor)

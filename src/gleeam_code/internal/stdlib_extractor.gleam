@@ -1,5 +1,6 @@
 import gleam/list
 import gleam/string
+import gleeam_code/internal/char
 
 pub type FunctionBlock {
   FunctionBlock(name: String, arity: Int, body: String)
@@ -136,42 +137,10 @@ fn is_toplevel_func_start(line: String) -> Bool {
   case string.to_graphemes(line) {
     [] -> False
     [first, ..] ->
-      case is_lowercase_alpha(first) {
+      case char.is_lowercase(first) {
         True -> string.contains(line, "(")
         False -> False
       }
-  }
-}
-
-fn is_lowercase_alpha(c: String) -> Bool {
-  case c {
-    "a"
-    | "b"
-    | "c"
-    | "d"
-    | "e"
-    | "f"
-    | "g"
-    | "h"
-    | "i"
-    | "j"
-    | "k"
-    | "l"
-    | "m"
-    | "n"
-    | "o"
-    | "p"
-    | "q"
-    | "r"
-    | "s"
-    | "t"
-    | "u"
-    | "v"
-    | "w"
-    | "x"
-    | "y"
-    | "z" -> True
-    _ -> False
   }
 }
 
